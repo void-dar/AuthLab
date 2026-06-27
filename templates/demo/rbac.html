@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}RBAC Demo — AuthLab{% endblock %}
+{% block content %}
+<div class="container" style="padding: 2rem 1rem;">
+
+  <div class="page-header">
+    <h1>👥 Role-Based Access Control Lab</h1>
+    <p>Visualize how roles map to permissions and control access to resources.</p>
+  </div>
+
+  <div class="edu-box" style="margin-bottom: 2rem;">
+    <h3>What is RBAC?</h3>
+    <p>In RBAC, access is granted based on a user's <strong>role</strong> (e.g., Admin, Staff, Guest). Permissions are assigned to roles, not directly to users. Users inherit permissions from their roles — simple, predictable, and easy to audit.</p>
+  </div>
+
+  <!-- Permission Matrix -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2 style="color: var(--accent); margin-bottom: 1rem;">📊 Permission Matrix</h2>
+    <button class="btn btn-primary" style="margin-bottom: 1rem;" onclick="loadPermissionMatrix()">Load Live Matrix →</button>
+    <div id="matrix-output">
+      <div style="overflow-x: auto;">
+        <table class="table permission-matrix">
+          <thead>
+            <tr>
+              <th>Permission</th>
+              <th><span class="badge" style="background:rgba(255,59,48,0.2); color:#ff3b30; border:1px solid #ff3b30;">Admin</span></th>
+              <th><span class="badge" style="background:rgba(255,159,10,0.2); color:#ff9f0a; border:1px solid #ff9f0a;">Moderator</span></th>
+              <th><span class="badge" style="background:rgba(0,212,255,0.2); color:var(--accent); border:1px solid var(--accent);">Staff</span></th>
+              <th><span class="badge" style="background:rgba(48,209,88,0.2); color:#30d158; border:1px solid #30d158;">User</span></th>
+              <th><span class="badge" style="background:rgba(142,142,147,0.2); color:#8e8e93; border:1px solid #8e8e93;">Guest</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>users:read</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+            <tr><td>users:write</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+            <tr><td>users:delete</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+            <tr><td>posts:read</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+            <tr><td>posts:write</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td></tr>
+            <tr><td>posts:moderate</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+            <tr><td>admin:access</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+            <tr><td>reports:view</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+            <tr><td>settings:manage</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Role Hierarchy -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2 style="color: var(--accent); margin-bottom: 1rem;">🏗️ Role Hierarchy</h2>
+    <div style="background: var(--bg-deep); padding: 1.5rem; border-radius: 8px; text-align: center;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+        <div style="background: rgba(255,59,48,0.2); border: 2px solid #ff3b30; border-radius: 8px; padding: 0.75rem 2rem; color: #ff3b30; font-weight: 700;">🔴 Admin<br><small style="font-weight:400; color:var(--text-muted)">Full access + system management</small></div>
+        <div style="color: var(--text-muted);">↑ extends</div>
+        <div style="background: rgba(255,159,10,0.2); border: 2px solid #ff9f0a; border-radius: 8px; padding: 0.75rem 2rem; color: #ff9f0a; font-weight: 700;">🟠 Moderator<br><small style="font-weight:400; color:var(--text-muted)">Content moderation + user management</small></div>
+        <div style="color: var(--text-muted);">↑ extends</div>
+        <div style="background: rgba(0,212,255,0.2); border: 2px solid var(--accent); border-radius: 8px; padding: 0.75rem 2rem; color: var(--accent); font-weight: 700;">🔵 Staff<br><small style="font-weight:400; color:var(--text-muted)">Extended read + write + reports</small></div>
+        <div style="color: var(--text-muted);">↑ extends</div>
+        <div style="background: rgba(48,209,88,0.2); border: 2px solid #30d158; border-radius: 8px; padding: 0.75rem 2rem; color: #30d158; font-weight: 700;">🟢 User<br><small style="font-weight:400; color:var(--text-muted)">Basic read + own post management</small></div>
+        <div style="color: var(--text-muted);">↑ extends</div>
+        <div style="background: rgba(142,142,147,0.2); border: 2px solid #8e8e93; border-radius: 8px; padding: 0.75rem 2rem; color: #8e8e93; font-weight: 700;">⚪ Guest<br><small style="font-weight:400; color:var(--text-muted)">Read-only public access</small></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resource Ownership Demo -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2 style="color: var(--accent); margin-bottom: 1rem;">📝 Resource Ownership (Posts)</h2>
+    <p style="color: var(--text-muted); margin-bottom: 1rem;">Users can only edit their <em>own</em> posts. Admins can edit any post. This combines RBAC with ownership checks.</p>
+    <button class="btn btn-primary" onclick="loadPosts()">Load Posts →</button>
+    <div id="posts-output" style="margin-top: 1rem;"></div>
+  </div>
+
+  <!-- Implementation -->
+  <div class="card">
+    <h2 style="color: var(--accent); margin-bottom: 1rem;">💻 Implementation Pattern</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; flex-wrap: wrap;">
+      <div>
+        <h4 style="margin-bottom: 0.5rem; color: var(--text-muted);">Role Check Dependency</h4>
+        <pre style="background: var(--bg-deep); padding: 1rem; border-radius: 8px; font-size: 0.8rem; color: var(--text); overflow-x: auto;">@router.get("/admin")
+async def admin_only(
+    user = Depends(require_role("admin"))
+):
+    return {"data": "admin only"}</pre>
+      </div>
+      <div>
+        <h4 style="margin-bottom: 0.5rem; color: var(--text-muted);">Permission Check</h4>
+        <pre style="background: var(--bg-deep); padding: 1rem; border-radius: 8px; font-size: 0.8rem; color: var(--text); overflow-x: auto;">@router.delete("/post/{id}")
+async def delete_post(
+    user = Depends(
+        require_permission("posts:delete")
+    )
+):
+    return {"deleted": True}</pre>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+async function loadPermissionMatrix() {
+  try {
+    const data = await API.get('/api/admin/permissions/matrix');
+    console.log(`Cookie: ${document.cookie}`);
+    Toast.success('Matrix loaded from live database');
+  } catch(e) { /**Toast.info('Showing static matrix (login as admin to load live data)')**/str(e); }
+}
+
+async function loadPosts() {
+  try {
+    const data = await API.get('/api/demo/posts');
+    const out = document.getElementById('posts-output');
+    if (!data.posts?.length) {
+      out.innerHTML = '<p style="color:var(--text-muted)">No posts found. Login to see posts.</p>';
+      return;
+    }
+    out.innerHTML = `<div style="display:grid; gap:0.75rem; margin-top:1rem;">
+      ${data.posts.map(p => `
+        <div style="background:var(--bg-deep); padding:1rem; border-radius:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+          <div>
+            <div style="font-weight:600; margin-bottom:0.25rem;">${p.title}</div>
+            <div style="color:var(--text-muted); font-size:0.85rem;">by ${p.author_username} · ${p.can_edit ? '<span style="color:var(--success)">✓ can edit</span>' : '<span style="color:var(--danger)">✗ read only</span>'}</div>
+          </div>
+          ${p.can_edit ? `<button class="btn btn-secondary" style="font-size:0.8rem;" onclick="editPost(${p.id})">Edit</button>` : ''}
+        </div>`).join('')}
+    </div>`;
+    if (data.note) {
+      out.innerHTML += `<div class="edu-box" style="margin-top:1rem;">${data.note}</div>`;
+    }
+  } catch(e) { Toast.error(e.message); }
+}
+
+async function editPost(id) {
+  const title = prompt('New title:');
+  if (!title) return;
+  try {
+    const data = await API.put(`/api/demo/posts/${id}`, { title });
+    Toast.success('Post updated!');
+    loadPosts();
+  } catch(e) { Toast.error(e.message); }
+}
+</script>
+{% endblock %}

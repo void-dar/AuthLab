@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div style="min-height: calc(100vh - 60px); display: flex; align-items: center; justify-content: center; padding: 2rem;">
+  <div style="width: 100%; max-width: 420px;">
+
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <div style="font-size: 3rem; margin-bottom: 0.5rem;">🔐</div>
+      <h1 style="font-size: 1.6rem; margin-bottom: 0.4rem;">Welcome back</h1>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Sign in to access AuthLab demos</p>
+    </div>
+
+    <div class="card">
+      <div id="login-message" class="hidden"></div>
+
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input type="text" id="username" class="form-input" placeholder="admin" autocomplete="username">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="password" class="form-input" placeholder="Password123!" autocomplete="current-password">
+      </div>
+
+      <button class="btn btn-primary btn-block btn-lg mt-2" id="login-btn" onclick="doLogin()">
+        Sign In
+      </button>
+
+      <div style="margin-top: 1rem; text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+        No account? <a href="/register">Create one</a>
+        &nbsp;·&nbsp;
+        <a href="/demo/passwordless">Passwordless login</a>
+      </div>
+    </div>
+
+    <!-- Demo accounts quick-fill -->
+    <div class="edu-box mt-2">
+      <h4>Quick Demo Login</h4>
+      <p>Click to auto-fill credentials:</p>
+      <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.5rem;">
+        {% for name in ['admin', 'moderator', 'staff1', 'alice', 'bob'] %}
+        <button class="btn btn-ghost btn-sm" onclick="fillCredentials('{{ name }}')">
+          {{ name }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Security notes -->
+    <div class="edu-box mt-2 warning-box">
+      <h4>Security Features Active</h4>
+      <ul>
+        <li>Account locks after 5 failed attempts</li>
+        <li>All attempts are audit-logged</li>
+        <li>Tokens set as HttpOnly cookies</li>
+        <li>Argon2id password verification</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function fillCredentials(username) {
+  document.getElementById('username').value = username;
+  document.getElementById('password').value = 'Password123!';
+}
+
+async function doLogin() {
+  const btn = document.getElementById('login-btn');
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const msgEl = document.getElementById('login-message');
+
+  if (!username || !password) {
+    showError('login-message', 'Please enter username and password');
+    return;
+  }
+
+  setLoading(btn, true);
+  clearMessage('login-message');
+
+  try {
+    const data = await API.post('/api/auth/login', { username, password });
+    Toast.success(`Welcome back, ${data.user.username}!`);
+    setTimeout(() => window.location.href = '/dashboard', 800);
+  } catch (err) {
+    showError('login-message', err.message);
+    setLoading(btn, false);
+  }
+}
+
+// Enter key
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('password').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') doLogin();
+  });
+});
+</script>
+{% endblock %}

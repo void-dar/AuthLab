@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}User Management — AuthLab Admin{% endblock %}
+{% block content %}
+<div class="container" style="padding: 2rem 1rem;">
+
+  <div class="page-header">
+    <div>
+      <a href="/admin" style="color: var(--text-muted); font-size: 0.85rem; text-decoration: none;">← Admin</a>
+      <h1>👥 User Management</h1>
+      <p>View, modify roles, and manage account status.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+      <h3 style="color: var(--accent);">All Users</h3>
+      <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="loadUsers()">Refresh</button>
+    </div>
+    <div id="users-table" style="overflow-x: auto;">
+      <p style="color: var(--text-muted);">Loading users...</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Role change modal -->
+<div id="role-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; display:none; align-items:center; justify-content:center;">
+  <div class="card" style="max-width:400px; width:90%;">
+    <h3 style="color:var(--accent); margin-bottom:1rem;">Change Role</h3>
+    <p style="color:var(--text-muted); margin-bottom:1rem;">User: <strong id="role-modal-user">—</strong></p>
+    <select id="role-select" class="form-input" style="margin-bottom:1rem;">
+      <option value="guest">Guest</option>
+      <option value="user">User</option>
+      <option value="staff">Staff</option>
+      <option value="moderator">Moderator</option>
+      <option value="admin">Admin</option>
+    </select>
+    <div style="display:flex; gap:1rem;">
+      <button class="btn btn-primary" onclick="confirmRoleChange()">Save</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedUserId = null;
+
+async function loadUsers() {
+  try {
+    const data = await API.get('/api/admin/users');
+    const users = data.users || [];
+    const el = document.getElementById('users-table');
+    if (!users.length) { el.innerHTML = '<p style="color:var(--text-muted)">No users found.</p>'; return; }
+
+    el.innerHTML = `<table class="table">
+      <thead>
+        <tr><th>ID</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        ${users.map(u => `
+          <tr>
+            <td style="color:var(--text-muted); font-size:0.85rem;">#${u.id}</td>
+            <td><strong>${u.username}</strong></td>
+            <td style="color:var(--text-muted); font-size:0.85rem;">${u.email || '—'}</td>
+            <td>
+              <span class="badge ${
+                u.role === 'admin' ? 'badge-danger' :
+                u.role === 'moderator' ? 'badge-warning' :
+                u.role === 'staff' ? 'badge-info' :
+                u.role === 'user' ? 'badge-success' : ''
+              }">${u.role}</span>
+            </td>
+            <td>
+              ${u.is_locked ? '<span class="badge badge-danger">🔒 Locked</span>' : '<span class="badge badge-success">Active</span>'}
+            </td>
+            <td style="color:var(--text-muted); font-size:0.8rem;">${u.last_login ? new Date(u.last_login).toLocaleDateString() : 'Never'}</td>
+            <td>
+              <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <button class="btn btn-secondary" style="font-size:0.75rem; padding:0.3rem 0.6rem;" onclick="openRoleModal(${u.id}, '${u.username}', '${u.role}')">Role</button>
+                ${u.is_locked ? `<button class="btn btn-success" style="font-size:0.75rem; padding:0.3rem 0.6rem;" onclick="unlockUser(${u.id})">Unlock</button>` : ''}
+              </div>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+  } catch(e) { Toast.error(e.message); }
+}
+
+function openRoleModal(userId, username, currentRole) {
+  selectedUserId = userId;
+  document.getElementById('role-modal-user').textContent = username;
+  document.getElementById('role-select').value = currentRole;
+  document.getElementById('role-modal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('role-modal').style.display = 'none';
+}
+
+async function confirmRoleChange() {
+  const role = document.getElementById('role-select').value;
+  try {
+    await API.post(`/api/admin/users/${selectedUserId}/role`, { role });
+    Toast.success('Role updated!');
+    closeModal();
+    loadUsers();
+  } catch(e) { Toast.error(e.message); }
+}
+
+async function unlockUser(userId) {
+  try {
+    await API.post(`/api/admin/users/${userId}/unlock`, {});
+    Toast.success('Account unlocked!');
+    loadUsers();
+  } catch(e) { Toast.error(e.message); }
+}
+
+loadUsers();
+</script>
+{% endblock %}

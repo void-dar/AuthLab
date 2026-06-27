@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}AuthLab{% endblock %} — Authentication & Authorization Lab</title>
+  <link rel="stylesheet" href="/static/css/main.css">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- ── NAVIGATION ──────────────────────────────────────── -->
+<nav class="nav">
+  <a href="/" class="nav-logo">AuthLab</a>
+
+  <div class="nav-links">
+    <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">Home</a>
+
+    <!-- Demos dropdown trigger — implemented as flat links for simplicity -->
+    <a href="/demo/hashing" class="nav-link {% if '/demo/hashing' in request.url.path %}active{% endif %}">Hashing</a>
+    <a href="/demo/jwt" class="nav-link {% if '/demo/jwt' in request.url.path %}active{% endif %}">JWT</a>
+    <a href="/demo/mfa" class="nav-link {% if '/demo/mfa' in request.url.path %}active{% endif %}">MFA</a>
+    <a href="/demo/rbac" class="nav-link {% if '/demo/rbac' in request.url.path %}active{% endif %}">RBAC</a>
+    <a href="/demo/abac" class="nav-link {% if '/demo/abac' in request.url.path %}active{% endif %}">ABAC</a>
+    <a href="/demo/oauth" class="nav-link {% if '/demo/oauth' in request.url.path %}active{% endif %}">OAuth</a>
+    <a href="/demo/attacks" class="nav-link {% if '/demo/attacks' in request.url.path %}active{% endif %}">Attacks</a>
+    <a href="/admin" class="nav-link {% if '/admin' in request.url.path %}active{% endif %}" id="nav-admin" style="display:none;">Admin</a>
+  </div>
+
+  <div class="nav-actions">
+    <span class="nav-user" id="nav-user" style="display:none;"></span>
+    <a href="/login" class="btn btn-secondary btn-sm" id="nav-login">Login</a>
+    <button class="btn btn-ghost btn-sm" id="nav-logout" style="display:none;">Logout</button>
+  </div>
+</nav>
+
+<!-- ── PAGE CONTENT ────────────────────────────────────── -->
+<div class="page-wrapper">
+  {% block content %}{% endblock %}
+</div>
+
+<!-- ── TOAST CONTAINER ─────────────────────────────────── -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ── SCRIPTS ─────────────────────────────────────────── -->
+<script src="/static/js/main.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    Auth.initNav();
+  });
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

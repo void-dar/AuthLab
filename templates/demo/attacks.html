@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% block title %}Attack Simulator — AuthLab{% endblock %}
+{% block content %}
+<div class="container" style="padding: 2rem 1rem;">
+
+  <div class="page-header">
+    <h1>⚠️ Attack Simulator Lab</h1>
+    <p>Safely demonstrate real-world authentication attacks and how to defend against them.</p>
+  </div>
+
+  <div class="edu-box" style="margin-bottom: 2rem; border-color: var(--danger);">
+    <strong>⚠️ Educational Purpose Only:</strong> These are controlled demonstrations in an isolated environment. The "attacks" here target only our own test data and illustrate vulnerabilities that are fully mitigated in production systems.
+  </div>
+
+  <div class="tabs" style="margin-bottom: 2rem;">
+    <div class="tab-list">
+      <button class="tab-btn active" data-tab="sqli">💉 SQL Injection</button>
+      <button class="tab-btn" data-tab="brute">🔨 Brute Force</button>
+      <button class="tab-btn" data-tab="idor">🔍 IDOR</button>
+      <button class="tab-btn" data-tab="jwt-attack">🪙 JWT Tampering</button>
+      <button class="tab-btn" data-tab="privesc">⬆️ Privilege Escalation</button>
+    </div>
+
+    <!-- SQL Injection -->
+    <div class="tab-content active" id="tab-sqli">
+      <div class="card">
+        <h3 style="color: var(--danger); margin-bottom: 0.5rem;">💉 SQL Injection Attack</h3>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Classic SQLi bypass: <code>' OR '1'='1</code> makes the WHERE clause always true, bypassing authentication.</p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+          <div>
+            <h4 style="color: var(--danger); margin-bottom: 0.5rem;">❌ Vulnerable Query</h4>
+            <pre style="background:var(--bg-deep); padding:1rem; border-radius:8px; font-size:0.8rem; color:var(--text); white-space:pre-wrap;">query = f"""
+SELECT * FROM users 
+WHERE username='{username}' 
+AND password='{password}'
+"""
+# Input: username = ' OR '1'='1'--
+# Result: SELECT * FROM users 
+#         WHERE username='' OR '1'='1'
+# Always returns a row → auth bypass!</pre>
+          </div>
+          <div>
+            <h4 style="color: var(--success); margin-bottom: 0.5rem;">✅ Secure (Parameterized)</h4>
+            <pre style="background:var(--bg-deep); padding:1rem; border-radius:8px; font-size:0.8rem; color:var(--text); white-space:pre-wrap;">query = """
+SELECT * FROM users 
+WHERE username = ? 
+AND password_hash = ?
+"""
+cursor.execute(query, (username, hash))
+# Input is data, never executed as SQL
+# SQLModel/SQLAlchemy does this for you</pre>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label class="form-label">Try SQL Injection Username</label>
+          <input type="text" id="sqli-input" class="form-input" value="' OR '1'='1'--" placeholder="Enter SQLi payload">
+        </div>
+        <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+          <button class="btn btn-danger" onclick="testSQLi(false)">Test on Vulnerable Endpoint</button>
+          <button class="btn btn-success" onclick="testSQLi(true)">Test on Secure Endpoint</button>
+        </div>
+        <div id="sqli-output" style="margin-top: 1rem;"></div>
+      </div>
+    </div>
+
+    <!-- Brute Force -->
+    <div class="tab-content" id="tab-brute">
+      <div class="card">
+        <h3 style="color: var(--danger); margin-bottom: 0.5rem;">🔨 Brute Force Attack</h3>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Simulate rapid login attempts to demonstrate rate limiting and account lockout defenses.</p>
+
+        <div class="edu-box" style="margin-bottom: 1.5rem;">
+          <strong>Attack:</strong> Attacker tries thousands of password combinations automatically.
+          <br><strong>Defense:</strong> Rate limiting (5 req/min) + account lockout after 5 failed attempts + exponential backoff.
+        </div>
+
+        <button class="btn btn-danger" onclick="runBruteForce()" id="brute-btn">Simulate Brute Force (10 attempts)</button>
+        <div id="brute-output" style="margin-top: 1rem;"></div>
+      </div>
+    </div>
+
+    <!-- IDOR -->
+    <div class="tab-content" id="tab-idor">
+      <div class="card">
+        <h3 style="color: var(--danger); margin-bottom: 0.5rem;">🔍 IDOR — Insecure Direct Object Reference</h3>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">IDOR occurs when a server exposes internal IDs without checking if the requester is authorized to access them.</p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+          <div>
+            <h4 style="color: var(--danger); margin-bottom: 0.5rem;">❌ Vulnerable</h4>
+            <pre style="background:var(--bg-deep); padding:1rem; border-radius:8px; font-size:0.8rem; color:var(--text); white-space:pre-wrap;">GET /api/users/profile/5
+# No auth check!
+# User 3 can read user 5's data
+# Just increment the ID to access anyone</pre>
+          </div>
+          <div>
+            <h4 style="color: var(--success); margin-bottom: 0.5rem;">✅ Secure</h4>
+            <pre style="background:var(--bg-deep); padding:1rem; border-radius:8px; font-size:0.8rem; color:var(--text); white-space:pre-wrap;">GET /api/users/profile/5
+# Server checks: current_user.id == 5
+# OR current_user.role == "admin"
+# Otherwise: 403 Forbidden</pre>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label class="form-label">Target User ID (try accessing other users' data)</label>
+          <input type="number" id="idor-id" class="form-input" value="1" min="1" max="10">
+        </div>
+        <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+          <button class="btn btn-danger" onclick="testIDOR(false)">Test Vulnerable Endpoint</button>
+          <button class="btn btn-success" onclick="testIDOR(true)">Test Secure Endpoint</button>
+        </div>
+        <div id="idor-output" style="margin-top: 1rem;"></div>
+      </div>
+    </div>
+
+    <!-- JWT Attack -->
+    <div class="tab-content" id="tab-jwt-attack">
+      <div class="card">
+        <h3 style="color: var(--danger); margin-bottom: 0.5rem;">🪙 JWT Algorithm Confusion Attack</h3>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Attacker changes the algorithm in the JWT header to "none" to bypass signature verification — only possible if the server doesn't validate the algorithm.</p>
+
+        <div class="edu-box" style="margin-bottom: 1.5rem;">
+          <strong>The "alg: none" attack:</strong> If a server accepts any algorithm, an attacker can change <code>"alg": "HS256"</code> to <code>"alg": "none"</code>, modify the payload to escalate privileges, and drop the signature. A vulnerable server accepts the unsigned token!
+        </div>
+
+        <button class="btn btn-danger" onclick="runJWTAttack()">Run JWT Tampering Demo →</button>
+        <div id="jwt-attack-output" style="margin-top: 1rem;"></div>
+      </div>
+    </div>
+
+    <!-- Privilege Escalation -->
+    <div class="tab-content" id="tab-privesc">
+      <div class="card">
+        <h3 style="color: var(--danger); margin-bottom: 0.5rem;">⬆️ Privilege Escalation</h3>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Demonstrate how a regular user attempts to access admin-only endpoints, and how proper authorization checks block this.</p>
+
+        <div class="edu-box" style="margin-bottom: 1.5rem;">
+          <strong>Broken Access Control</strong> (OWASP #1 2021): The most common vulnerability. Application doesn't verify that the authenticated user has permission to perform the requested action.
+        </div>
+
+        <p style="color: var(--text-muted); margin-bottom: 1rem;">Login as a regular user first, then try to access admin endpoints:</p>
+        <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+          <button class="btn btn-warning" onclick="tryPrivEsc('/api/admin/users')">Try: GET /api/admin/users</button>
+          <button class="btn btn-warning" onclick="tryPrivEsc('/api/admin/logs')">Try: GET /api/admin/logs</button>
+          <button class="btn btn-warning" onclick="tryPrivEsc('/api/admin/tokens')">Try: GET /api/admin/tokens</button>
+        </div>
+        <div id="privesc-output" style="margin-top: 1rem;"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Defense Summary -->
+  <div class="card">
+    <h2 style="color: var(--accent); margin-bottom: 1rem;">🛡️ Defense Summary (OWASP Top 10 Auth)</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.75rem;">
+      {% set defenses = [
+        ("A01 - Broken Access Control", "Enforce authorization on every request. Never trust client-side roles.", "danger"),
+        ("A02 - Cryptographic Failures", "Use Argon2id for passwords. TLS for transport. Never MD5/SHA1.", "warning"),
+        ("A03 - Injection", "Parameterized queries always. ORM models prevent raw SQL injection.", "danger"),
+        ("A07 - Auth Failures", "Rate limit logins. Account lockout. Strong password policy. MFA.", "warning"),
+        ("Brute Force", "5 attempts → lockout. Rate limiting. CAPTCHA for sensitive endpoints.", "success"),
+        ("IDOR", "Check resource ownership on every request. Never trust IDs from the client.", "warning"),
+        ("JWT Attacks", "Validate algorithm explicitly. Use asymmetric keys for distributed systems.", "success"),
+        ("Session Fixation", "Always generate new session ID on login. Invalidate old sessions.", "success"),
+      ] %}
+      {% for title, desc, level in defenses %}
+      <div style="background: rgba({% if level == 'danger' %}255,59,48{% elif level == 'warning' %}255,159,10{% else %}48,209,88{% endif %},0.08); border: 1px solid var(--{{ level }}); border-radius: 8px; padding: 0.75rem;">
+        <div style="font-weight: 600; color: var(--{{ level }}); margin-bottom: 0.25rem; font-size: 0.9rem;">{{ title }}</div>
+        <div style="color: var(--text-muted); font-size: 0.82rem;">{{ desc }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+initTabs();
+
+async function testSQLi(secure) {
+  const payload = document.getElementById('sqli-input').value;
+  try {
+    const data = await API.post('/api/demo/attack/sql-injection', { username: payload, secure });
+    const out = document.getElementById('sqli-output');
+    const blocked = !data.bypassed;
+    const color = data.bypassed ? 'var(--danger)' : 'var(--success)';
+    out.innerHTML = `
+      <div style="background:var(--bg-deep); padding:1rem; border-radius:8px; border:1px solid ${color};">
+        <div style="color:${color}; font-weight:700; margin-bottom:0.5rem;">${data.mode}: ${data.bypassed ? '❌ VULNERABLE — Input treated as SQL' : '✅ BLOCKED'}</div>
+        <div style="color:var(--text-muted); font-size:0.9rem; margin-bottom:0.5rem;">${data.message}</div>
+        ${data.executed_query ? `<div style="margin-top:0.5rem; font-family:var(--font-mono); font-size:0.8rem; color:var(--warning); word-break:break-all;">Query: ${data.executed_query}</div>` : ''}
+        <div style="margin-top:0.75rem; font-size:0.85rem; color:var(--text-muted);">${data.educational || ''}</div>
+      </div>`;
+  } catch(e) { Toast.error(e.message); }
+}
+
+async function runBruteForce() {
+  setLoading(document.getElementById("brute-btn"), true);
+  try {
+    const data = await API.get('/api/demo/attack/brute-force-simulation');
+    const out = document.getElementById('brute-output');
+    out.innerHTML = `
+      <div style="display:grid; gap:0.5rem; margin-bottom:1rem;">
+        ${(data.attempts || []).map(a => `
+          <div style="display:flex; justify-content:space-between; padding:0.5rem 0.75rem; background:var(--bg-deep); border-radius:6px; border-left:3px solid ${a.blocked ? 'var(--success)' : 'var(--warning)'};">
+            <span style="font-family:var(--font-mono); font-size:0.85rem; color:var(--text-muted)">Attempt #${a.attempt}: "${a.password}"</span>
+            <span style="color:${a.blocked ? 'var(--success)' : 'var(--warning)'}; font-size:0.85rem; text-align:right; max-width:300px;">${a.reason}</span>
+          </div>`).join('')}
+      </div>
+      <div class="edu-box">${data.summary || ''}</div>
+    `;
+  } catch(e) { Toast.error(e.message); }
+  finally { setLoading(document.getElementById("brute-btn"), false); }
+}
+
+async function testIDOR(secure) {
+  const userId = document.getElementById('idor-id').value;
+  try {
+    const data = await API.post('/api/demo/attack/insecure-direct-reference', { target_user_id: parseInt(userId), secure });
+    const out = document.getElementById('idor-output');
+    const color = data.data_exposed ? 'var(--danger)' : 'var(--success)';
+    out.innerHTML = `
+      <div style="background:var(--bg-deep); padding:1rem; border-radius:8px; border:1px solid ${color};">
+        <div style="color:${color}; font-weight:700; margin-bottom:0.5rem;">${data.data_exposed ? '⚠️ IDOR VULNERABILITY' : '✅ ACCESS CONTROLLED'}</div>
+        <div style="color:var(--text-muted); font-size:0.9rem; margin-bottom:0.75rem;">${data.message}</div>
+        ${data.post ? `<div style="font-family:var(--font-mono); font-size:0.8rem; color:var(--warning);">Post ID: ${data.post.id} | Owner: ${data.post.owner} | Title: "${data.post.title}"</div>` : ''}
+        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.5rem;">${data.educational?.fix || ''}</div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('idor-output').innerHTML = `<div style="background:var(--bg-deep); padding:1rem; border-radius:8px; border:1px solid var(--success);"><div style="color:var(--success);">✅ ${e.message}</div></div>`;
+  }
+}
+
+async function runJWTAttack() {
+  try {
+    const data = await API.post('/api/demo/jwt/tamper', {});
+    const out = document.getElementById('jwt-attack-output');
+    out.innerHTML = `
+      <div style="display:grid; gap:1rem;">
+        <div style="background:rgba(255,59,48,0.08); border:1px solid var(--danger); border-radius:8px; padding:1rem;">
+          <h4 style="color:var(--danger); margin-bottom:0.5rem;">Tampered Token Attempt</h4>
+          <code style="font-size:0.75rem; word-break:break-all; color:var(--text-muted);">${data.tampered_token}</code>
+        </div>
+        <div style="background:${data.tamper_detected ? 'rgba(48,209,88,0.1)' : 'rgba(255,59,48,0.1)'}; border:1px solid ${data.tamper_detected ? 'var(--success)' : 'var(--danger)'}; border-radius:8px; padding:1rem;">
+          <h4 style="color:${data.tamper_detected ? 'var(--success)' : 'var(--danger)'}; margin-bottom:0.5rem;">${data.tamper_detected ? '✅ Attack Detected & Blocked' : '❌ Attack Succeeded (Vulnerability!)'}</h4>
+          <p style="color:var(--text-muted); font-size:0.9rem;">${data.explanation}</p>
+        </div>
+      </div>`;
+  } catch(e) { Toast.error(e.message); }
+}
+
+async function tryPrivEsc(endpoint) {
+  const out = document.getElementById('privesc-output');
+  try {
+    const data = await API.get(endpoint);
+    out.innerHTML = `<div style="background:rgba(255,59,48,0.1); border:1px solid var(--danger); border-radius:8px; padding:1rem;"><div style="color:var(--danger); font-weight:700;">❌ VULNERABILITY: Unauthorized access succeeded to ${endpoint}</div><pre style="font-size:0.8rem; color:var(--warning); margin-top:0.5rem;">${JSON.stringify(data, null, 2).substring(0,300)}</pre></div>`;
+    Toast.error('Access granted — privilege escalation succeeded!');
+  } catch(e) {
+    out.innerHTML = `<div style="background:rgba(48,209,88,0.1); border:1px solid var(--success); border-radius:8px; padding:1rem;"><div style="color:var(--success); font-weight:700;">✅ Access Denied to ${endpoint}</div><div style="color:var(--text-muted); font-size:0.9rem; margin-top:0.25rem;">${e.message} — Authorization check worked correctly.</div></div>`;
+    Toast.success('Access correctly denied!');
+  }
+}
+</script>
+{% endblock %}

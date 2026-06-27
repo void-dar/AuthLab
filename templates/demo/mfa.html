@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}MFA Demo — AuthLab{% endblock %}
+{% block content %}
+<div class="container" style="padding: 2rem 1rem;">
+
+  <div class="page-header">
+    <h1>📱 Multi-Factor Authentication Lab</h1>
+    <p>Generate and verify TOTP codes. Understand how MFA works.</p>
+  </div>
+
+  <div class="edu-box" style="margin-bottom: 2rem;">
+    <h3>What is MFA?</h3>
+    <p>Multi-Factor Authentication requires <strong>two or more</strong> of: something you <em>know</em> (password), something you <em>have</em> (phone/device), something you <em>are</em> (biometrics). TOTP (Time-based One-Time Password) uses a shared secret + current time to generate a 6-digit code that changes every 30 seconds.</p>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+
+    <!-- OTP Generator -->
+    <div class="card">
+      <h3 style="color: var(--accent); margin-bottom: 1rem;">⚡ Live OTP Generator</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Generate a one-time password for a user. In a real system, users scan a QR code to register their authenticator app.</p>
+      <div style="margin-bottom: 1rem;">
+        <label class="form-label">Username</label>
+        <input type="text" id="otp-user" class="form-input" value="alice" placeholder="Username">
+      </div>
+      <button class="btn btn-primary" onclick="generateOTP()">Generate OTP →</button>
+      <div id="otp-output" style="margin-top: 1.5rem; display: none;">
+        <div style="text-align: center; background: var(--bg-deep); padding: 2rem; border-radius: 12px; margin-bottom: 1rem;">
+          <div style="font-size: 3rem; font-family: var(--font-mono); font-weight: 700; color: var(--accent); letter-spacing: 0.5rem;" id="otp-code">------</div>
+          <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">Valid for <span id="otp-expires">30</span> seconds</div>
+          <div style="height: 6px; background: var(--bg-card); border-radius: 3px; margin-top: 1rem; overflow: hidden;">
+            <div id="otp-progress" style="height: 100%; background: var(--accent); border-radius: 3px; transition: width 1s linear;"></div>
+          </div>
+        </div>
+        <div class="edu-box">
+          <strong>How it works:</strong> HMAC-SHA1(shared_secret + floor(time / 30s)) → truncated to 6 digits. Both the server and your phone compute this independently — no network needed!
+        </div>
+      </div>
+    </div>
+
+    <!-- OTP Verifier -->
+    <div class="card">
+      <h3 style="color: var(--accent); margin-bottom: 1rem;">✅ OTP Verifier</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Verify the generated code. Enter the 6-digit code from the generator above.</p>
+      <div style="margin-bottom: 1rem;">
+        <label class="form-label">Username</label>
+        <input type="text" id="verify-user" class="form-input" value="alice">
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label class="form-label">6-Digit Code</label>
+        <input type="text" id="verify-code" class="form-input" placeholder="123456" maxlength="6" style="font-size: 1.5rem; text-align: center; letter-spacing: 0.5rem; font-family: var(--font-mono);">
+      </div>
+      <button class="btn btn-primary" onclick="verifyOTP()">Verify Code →</button>
+      <div id="verify-output" style="margin-top: 1rem;"></div>
+    </div>
+  </div>
+
+  <!-- TOTP Algorithm Explained -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2 style="color: var(--accent); margin-bottom: 1rem;">⚙️ How TOTP Works (RFC 6238)</h2>
+    <div style="background: var(--bg-deep); padding: 1.5rem; border-radius: 8px;">
+      <div class="flow-step">
+        <div class="flow-icon">1️⃣</div>
+        <div><strong>Shared Secret</strong> — During setup, server and authenticator app exchange a secret key (usually via QR code)</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="flow-icon">2️⃣</div>
+        <div><strong>Time Counter</strong> — Both sides compute <code>T = floor(Unix_time / 30)</code> — a new number every 30 seconds</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="flow-icon">3️⃣</div>
+        <div><strong>HMAC-SHA1</strong> — Compute <code>HMAC-SHA1(secret, T)</code> — a cryptographic fingerprint</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="flow-icon">4️⃣</div>
+        <div><strong>Truncation</strong> — Extract 6 digits from the HMAC output using dynamic truncation</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step" style="border-color: var(--success);">
+        <div class="flow-icon">✅</div>
+        <div><strong>Verify</strong> — Server computes the same value. If codes match, authentication succeeds (±1 window for clock drift)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MFA Types Comparison -->
+  <div class="card">
+    <h2 style="color: var(--accent); margin-bottom: 1rem;">🔐 MFA Methods Comparison</h2>
+    <div style="overflow-x: auto;">
+      <table class="table">
+        <thead>
+          <tr><th>Method</th><th>Security</th><th>Phishing Resistant</th><th>UX</th><th>Used By</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>TOTP (Google Auth)</td><td><span class="badge badge-warning">Good</span></td><td>❌ No</td><td>⭐⭐⭐</td><td>Most apps</td></tr>
+          <tr><td>SMS OTP</td><td><span class="badge badge-danger">Weak</span></td><td>❌ No</td><td>⭐⭐⭐⭐</td><td>Banks, social</td></tr>
+          <tr><td>Hardware Key (FIDO2)</td><td><span class="badge badge-success">Excellent</span></td><td>✅ Yes</td><td>⭐⭐⭐</td><td>Enterprise</td></tr>
+          <tr><td>Passkeys (WebAuthn)</td><td><span class="badge badge-success">Excellent</span></td><td>✅ Yes</td><td>⭐⭐⭐⭐⭐</td><td>Google, Apple</td></tr>
+          <tr><td>Email Magic Link</td><td><span class="badge badge-warning">Moderate</span></td><td>❌ No</td><td>⭐⭐⭐⭐</td><td>Notion, Slack</td></tr>
+          <tr><td>Push Notification</td><td><span class="badge badge-warning">Good</span></td><td>⚠️ Partial</td><td>⭐⭐⭐⭐</td><td>Duo, Microsoft</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="edu-box" style="margin-top: 1rem;">
+      <strong>SMS OTP is the weakest:</strong> SIM swapping attacks allow attackers to intercept SMS codes. Always prefer TOTP or hardware keys for sensitive accounts.
+    </div>
+  </div>
+
+</div>
+
+<script>
+let otpTimer = null;
+
+async function generateOTP() {
+  const username = document.getElementById('otp-user').value.trim();
+  if (!username) return;
+  try {
+    const data = await API.post('/api/demo/mfa/generate', { username });
+    const otp = data.otp;
+    if (!otp) { Toast.error('Failed to generate OTP: ' + (data.detail || JSON.stringify(data))); return; }
+    document.getElementById('otp-output').style.display = 'block';
+    document.getElementById('otp-code').textContent = otp;
+    document.getElementById('otp-code').style.color = 'var(--accent)';
+    document.getElementById('verify-user').value = username;
+    document.getElementById('verify-code').value = otp;
+
+    const expires = data.expires_in || 300;
+    let remaining = expires;
+    if (otpTimer) clearInterval(otpTimer);
+    otpTimer = setInterval(() => {
+      remaining--;
+      document.getElementById('otp-expires').textContent = remaining;
+      document.getElementById('otp-progress').style.width = `${(remaining / expires) * 100}%`;
+      if (remaining <= 0) {
+        clearInterval(otpTimer);
+        document.getElementById('otp-code').textContent = 'EXPIRED';
+        document.getElementById('otp-code').style.color = 'var(--danger)';
+      }
+    }, 1000);
+    Toast.success('OTP generated!');
+  } catch(e) { Toast.error(e.message); }
+}
+
+async function verifyOTP() {
+  const username = document.getElementById('verify-user').value.trim();
+  const code = document.getElementById('verify-code').value.trim();
+  if (!username || !code) return;
+  try {
+    const data = await API.post('/api/demo/mfa/verify', { username, code });
+    const out = document.getElementById('verify-output');
+    if (data.valid) {
+      out.innerHTML = `<div class="alert alert-success">✅ ${data.message}</div>`;
+    } else {
+      out.innerHTML = `<div class="alert alert-danger">❌ ${data.message}</div>`;
+    }
+  } catch(e) {
+    document.getElementById('verify-output').innerHTML = `<div class="alert alert-danger">❌ ${e.message}</div>`;
+  }
+}
+</script>
+{% endblock %}

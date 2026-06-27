@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — AuthLab{% endblock %}
+{% block content %}
+<div class="container" style="padding: 2rem 1rem;">
+
+  <div class="page-header">
+    <h1>🛡️ Admin Dashboard</h1>
+    <p>Security operations center — monitor users, tokens, sessions, and audit events.</p>
+  </div>
+
+  <!-- Stats Row -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem;" id="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total Users</div>
+      <div class="stat-value" id="stat-users">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active Sessions</div>
+      <div class="stat-value" id="stat-sessions">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active Tokens</div>
+      <div class="stat-value" id="stat-tokens">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Failed Logins (24h)</div>
+      <div class="stat-value" id="stat-failed" style="color: var(--danger);">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Locked Accounts</div>
+      <div class="stat-value" id="stat-locked" style="color: var(--warning);">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Audit Events (24h)</div>
+      <div class="stat-value" id="stat-events">—</div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h3 style="color: var(--accent); margin-bottom: 1rem;">⚡ Quick Navigation</h3>
+    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+      <a href="/admin/users" class="btn btn-secondary">👥 Manage Users</a>
+      <a href="/admin/logs" class="btn btn-secondary">📋 Audit Logs</a>
+      <a href="/admin/tokens" class="btn btn-secondary">🪙 Token Manager</a>
+    </div>
+  </div>
+
+  <!-- Recent Login Attempts -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h3 style="color: var(--accent);">🔐 Recent Login Attempts</h3>
+      <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="loadDashboard()">Refresh</button>
+    </div>
+    <div id="login-attempts" style="overflow-x: auto;">
+      <p style="color: var(--text-muted);">Loading...</p>
+    </div>
+  </div>
+
+  <!-- Recent Audit Events -->
+  <div class="card">
+    <h3 style="color: var(--accent); margin-bottom: 1rem;">📋 Recent Security Events</h3>
+    <div id="recent-events" style="overflow-x: auto;">
+      <p style="color: var(--text-muted);">Loading...</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+async function loadDashboard() {
+  try {
+    const data = await API.get('/api/admin/dashboard');
+    document.getElementById('stat-users').textContent = data.stats?.total_users ?? '—';
+    document.getElementById('stat-sessions').textContent = data.stats?.active_sessions ?? '—';
+    document.getElementById('stat-tokens').textContent = data.stats?.active_tokens ?? '—';
+    document.getElementById('stat-failed').textContent = data.stats?.failed_logins_24h ?? '—';
+    document.getElementById('stat-locked').textContent = data.stats?.locked_accounts ?? '—';
+    document.getElementById('stat-events').textContent = data.stats?.audit_events_24h ?? '—';
+
+    // Login attempts table
+    const attempts = data.recent_login_attempts || [];
+    const attEl = document.getElementById('login-attempts');
+    if (attempts.length) {
+      attEl.innerHTML = `<table class="table">
+        <thead><tr><th>Time</th><th>Username</th><th>IP</th><th>Result</th></tr></thead>
+        <tbody>${attempts.map(a => `
+          <tr>
+            <td style="font-size:0.8rem; color:var(--text-muted);">${new Date(a.created_at).toLocaleString()}</td>
+            <td><code>${a.username}</code></td>
+            <td style="font-family:var(--font-mono); font-size:0.8rem;">${a.ip_address || '—'}</td>
+            <td><span class="badge ${a.success ? 'badge-success' : 'badge-danger'}">${a.success ? 'Success' : 'Failed'}</span></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+    } else {
+      attEl.innerHTML = '<p style="color:var(--text-muted)">No login attempts recorded yet.</p>';
+    }
+
+    // Audit events
+    const events = data.recent_events || [];
+    const evEl = document.getElementById('recent-events');
+    if (events.length) {
+      evEl.innerHTML = `<table class="table">
+        <thead><tr><th>Time</th><th>Event</th><th>User</th><th>Details</th></tr></thead>
+        <tbody>${events.map(e => `
+          <tr>
+            <td style="font-size:0.8rem; color:var(--text-muted);">${new Date(e.created_at).toLocaleString()}</td>
+            <td><span class="badge badge-info">${e.event_type}</span></td>
+            <td>${e.username || '<span style="color:var(--text-muted)">—</span>'}</td>
+            <td style="font-size:0.8rem; color:var(--text-muted);">${e.details || '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+    } else {
+      evEl.innerHTML = '<p style="color:var(--text-muted)">No events recorded yet.</p>';
+    }
+  } catch(e) {
+    if (e.message.includes('403') || e.message.includes('401')) {
+      Toast.error('Admin access required');
+      setTimeout(() => window.location.href = '/login', 2000);
+    } else {
+      Toast.error(e.message);
+    }
+  }
+}
+loadDashboard();
+</script>
+{% endblock %}

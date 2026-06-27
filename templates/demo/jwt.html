@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}JWT Tokens Demo — AuthLab{% endblock %}
+{% block content %}
+<div class="container" style="padding: 2rem 1rem;">
+
+  <div class="page-header">
+    <h1>🪙 JWT Token Lab</h1>
+    <p>Decode, inspect, tamper with, and understand JSON Web Tokens.</p>
+  </div>
+
+  <div class="edu-box" style="margin-bottom: 2rem;">
+    <h3>What is a JWT?</h3>
+    <p>A <strong>JSON Web Token</strong> is a compact, URL-safe token with three Base64URL-encoded parts: <span style="color:#bf5af2">Header</span> . <span style="color:#f0b429">Payload</span> . <span style="color:#30d158">Signature</span></p>
+    <p style="margin-top: 0.5rem;">The server signs the token with a secret key. If anyone modifies the payload, the signature check fails — but the <strong>payload is NOT encrypted</strong>, only signed. Never put secrets in JWT payloads!</p>
+  </div>
+
+  <div class="tabs" style="margin-bottom: 2rem;">
+    <div class="tab-list">
+      <button class="tab-btn active" data-tab="decoder">🔍 Decoder</button>
+      <button class="tab-btn" data-tab="live">⚡ Live Token</button>
+      <button class="tab-btn" data-tab="tamper">🔓 Tamper Attack</button>
+      <button class="tab-btn" data-tab="refresh">🔄 Refresh Flow</button>
+    </div>
+
+    <!-- Tab: Decoder -->
+    <div class="tab-content active" id="tab-decoder">
+      <div class="card">
+        <h3 style="color: var(--accent); margin-bottom: 1rem;">Paste any JWT to decode</h3>
+        <textarea id="jwt-paste" class="form-input" rows="4" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c" style="font-family: var(--font-mono); font-size: 0.8rem;"></textarea>
+        <button class="btn btn-primary" style="margin-top: 1rem;" onclick="decodeJWT()">Decode →</button>
+        <div id="decode-output" style="margin-top: 1.5rem;"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Live -->
+    <div class="tab-content" id="tab-live">
+      <div class="card">
+        <h3 style="color: var(--accent); margin-bottom: 1rem;">Your Live JWT (requires login)</h3>
+        <button class="btn btn-primary" onclick="getLiveToken()">Generate Demo Token →</button>
+        <div id="live-output" style="margin-top: 1.5rem;"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Tamper -->
+    <div class="tab-content" id="tab-tamper">
+      <div class="card">
+        <h3 style="color: var(--danger); margin-bottom: 0.5rem;">⚠️ JWT Tampering Attack Demo</h3>
+        <p style="color: var(--text-muted); margin-bottom: 1rem;">This demo generates a real token for you, then shows what happens when an attacker tries to modify the payload to escalate privileges. The server's signature verification catches this.</p>
+        <div class="edu-box" style="margin-bottom: 1rem;">
+          <strong>Requires login.</strong> The server generates a token signed with your identity (role: user), then attempts to tamper the payload to claim role: admin — with the original signature intact.
+        </div>
+        <button class="btn btn-danger" onclick="runTamperDemo()">Run Tampering Attack →</button>
+        <div id="tamper-output" style="margin-top: 1.5rem;"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Refresh Flow -->
+    <div class="tab-content" id="tab-refresh">
+      <div class="card">
+        <h3 style="color: var(--accent); margin-bottom: 1rem;">Refresh Token Flow</h3>
+        <div class="edu-box" style="margin-bottom: 1rem;">
+          <strong>Why two tokens?</strong> Access tokens are short-lived (15–30 min) to limit damage if stolen. Refresh tokens are long-lived and used only to issue new access tokens. This way, even if an access token is intercepted, it expires quickly.
+        </div>
+        <div id="refresh-flow-viz" style="background: var(--bg-deep); padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem;">
+          <div class="flow-step">
+            <div class="flow-icon">1️⃣</div>
+            <div><strong>Login</strong> → Server issues <span style="color: var(--accent)">access_token</span> (15min) + <span style="color: var(--success)">refresh_token</span> (7 days)</div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-step">
+            <div class="flow-icon">2️⃣</div>
+            <div><strong>Use API</strong> → Send <span style="color: var(--accent)">access_token</span> in cookie. Server validates signature + expiry.</div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-step">
+            <div class="flow-icon">3️⃣</div>
+            <div><strong>Access token expires</strong> → Client sends <span style="color: var(--success)">refresh_token</span> to <code>/api/auth/refresh</code></div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-step">
+            <div class="flow-icon">4️⃣</div>
+            <div><strong>New tokens issued</strong> → Old refresh token <em>invalidated</em> (token rotation). New pair issued.</div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-step" style="border-color: var(--warning);">
+            <div class="flow-icon">🚨</div>
+            <div><strong>Theft detection:</strong> If old refresh token used again → <em>all tokens for that user revoked</em> (reuse detection)</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="runRefreshDemo()">Simulate Refresh Flow →</button>
+        <div id="refresh-output" style="margin-top: 1rem;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JWT Security Summary -->
+  <div class="card">
+    <h3 style="color: var(--accent); margin-bottom: 1rem;">🔐 JWT Security Best Practices</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+      <div>
+        <h4 style="color: var(--danger); margin-bottom: 0.5rem;">❌ Never Do</h4>
+        <ul style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.8; padding-left: 1rem;">
+          <li>Store sensitive data in payload</li>
+          <li>Use "alg: none" (algorithm confusion)</li>
+          <li>Store JWT in localStorage (XSS risk)</li>
+          <li>Use very long expiration</li>
+          <li>Skip signature verification</li>
+        </ul>
+      </div>
+      <div>
+        <h4 style="color: var(--success); margin-bottom: 0.5rem;">✅ Always Do</h4>
+        <ul style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.8; padding-left: 1rem;">
+          <li>Use HttpOnly cookies for storage</li>
+          <li>Short expiration (15–30 min)</li>
+          <li>Validate algorithm explicitly (HS256)</li>
+          <li>Implement refresh token rotation</li>
+          <li>Include jti (JWT ID) for revocation</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+initTabs();
+
+function renderJWTParts(token) {
+  const parts = token.split('.');
+  if (parts.length !== 3) return '<p style="color:var(--danger)">Invalid JWT format</p>';
+  try {
+    const header = JSON.parse(atob(parts[0].replace(/-/g,'+').replace(/_/g,'/')));
+    const payload = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
+    return `
+      <div class="jwt-display" style="margin-bottom:1rem; font-family: var(--font-mono); font-size: 0.8rem; word-break:break-all; padding:1rem; background:var(--bg-deep); border-radius:8px;">
+        <span style="color:#bf5af2">${parts[0]}</span>.<span style="color:#f0b429">${parts[1]}</span>.<span style="color:#30d158">${parts[2]}</span>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1rem;">
+        <div style="background:rgba(191,90,242,0.1); border:1px solid #bf5af2; border-radius:8px; padding:1rem;">
+          <h4 style="color:#bf5af2; margin-bottom:0.5rem;">Header</h4>
+          <pre style="font-size:0.8rem; color:var(--text); margin:0;">${JSON.stringify(header, null, 2)}</pre>
+        </div>
+        <div style="background:rgba(240,180,41,0.1); border:1px solid #f0b429; border-radius:8px; padding:1rem;">
+          <h4 style="color:#f0b429; margin-bottom:0.5rem;">Payload (Claims)</h4>
+          <pre style="font-size:0.8rem; color:var(--text); margin:0;">${JSON.stringify(payload, null, 2)}</pre>
+          ${payload.exp ? `<p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.5rem;">Expires: ${new Date(payload.exp*1000).toLocaleString()}</p>` : ''}
+        </div>
+        <div style="background:rgba(48,209,88,0.1); border:1px solid #30d158; border-radius:8px; padding:1rem;">
+          <h4 style="color:#30d158; margin-bottom:0.5rem;">Signature</h4>
+          <code style="font-size:0.75rem; color:#30d158; word-break:break-all;">${parts[2]}</code>
+          <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.5rem;">HMAC-SHA256 of base64(header).base64(payload) using server's secret key. Tamper-proof.</p>
+        </div>
+      </div>`;
+  } catch(e) {
+    return `<p style="color:var(--danger)">Could not decode: ${e.message}</p>`;
+  }
+}
+
+function decodeJWT() {
+  const token = document.getElementById('jwt-paste').value.trim();
+  document.getElementById('decode-output').innerHTML = renderJWTParts(token);
+}
+
+async function getLiveToken() {
+  try {
+    const data = await API.get('/api/demo/jwt/create-demo');
+    const out = document.getElementById('live-output');
+    out.innerHTML = `<h4 style="color:var(--text-muted); margin-bottom:1rem;">Educational JWT (short expiry for demo)</h4>` + renderJWTParts(data.token);
+    const edu = data.educational_notes;
+    if (edu) {
+      out.innerHTML += `<div class="edu-box" style="margin-top:1rem;"><strong>Notes:</strong><br>${edu.map(n=>`• ${n}`).join('<br>')}</div>`;
+    }
+  } catch(e) { Toast.error(e.message); }
+}
+
+async function runTamperDemo() {
+  try {
+    const data = await API.post('/api/demo/jwt/tamper', {});
+    const out = document.getElementById('tamper-output');
+    out.innerHTML = `
+      <div style="display:grid; gap:1rem;">
+        <div style="background:rgba(0,212,255,0.08); border:1px solid var(--accent); border-radius:8px; padding:1rem;">
+          <h4 style="color:var(--accent); margin-bottom:0.5rem;">Original Token (role: user)</h4>
+          <code style="font-size:0.75rem; word-break:break-all; color:var(--text-muted);">${data.original_token}</code>
+        </div>
+        <div style="background:rgba(255,59,48,0.08); border:1px solid var(--danger); border-radius:8px; padding:1rem;">
+          <h4 style="color:var(--danger); margin-bottom:0.5rem;">Tampered Token (attempted role: admin)</h4>
+          <code style="font-size:0.75rem; word-break:break-all; color:var(--text-muted);">${data.tampered_token}</code>
+        </div>
+        <div style="background:${data.tamper_detected ? 'rgba(48,209,88,0.1)' : 'rgba(255,59,48,0.1)'}; border:1px solid ${data.tamper_detected ? 'var(--success)' : 'var(--danger)'}; border-radius:8px; padding:1rem;">
+          <h4 style="color:${data.tamper_detected ? 'var(--success)' : 'var(--danger)'}; margin-bottom:0.5rem;">
+            ${data.tamper_detected ? '✅ Server Rejected Tampered Token' : '❌ Tamper Not Detected (Vulnerability!)'}
+          </h4>
+          <p style="font-size:0.9rem; color:var(--text-muted);">${data.explanation}</p>
+        </div>
+      </div>`;
+  } catch(e) { Toast.error(e.message); }
+}
+
+async function runRefreshDemo() {
+  const out = document.getElementById('refresh-output');
+  out.innerHTML = '<p style="color:var(--text-muted);">Testing refresh endpoint...</p>';
+  try {
+    const data = await API.post('/api/auth/refresh', {});
+    out.innerHTML = `<div class="edu-box"><strong>✅ New access token issued!</strong><br>Old refresh token invalidated. Token rotation successful.</div>`;
+  } catch(e) {
+    out.innerHTML = `<div class="edu-box"><strong>Note:</strong> Refresh requires an active session. Log in first, then try again.<br><em>${e.message}</em></div>`;
+  }
+}
+</script>
+{% endblock %}

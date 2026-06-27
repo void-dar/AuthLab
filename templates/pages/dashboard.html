@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — AuthLab{% endblock %}
+{% block content %}
+<div class="container" style="padding: 2rem 1rem;">
+
+  <div style="margin-bottom: 2rem;">
+    <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">
+      Welcome back, <span id="username-display" style="color: var(--accent)">...</span>
+    </h1>
+    <p style="color: var(--text-muted);">Your authentication session is active. Explore the demos below.</p>
+  </div>
+
+  <!-- Session Info Card -->
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <h3 style="margin-bottom: 1rem; color: var(--accent);">🔐 Your Current Session</h3>
+    <div id="session-info" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+      <div class="stat-card">
+        <div class="stat-label">Role</div>
+        <div class="stat-value" id="user-role">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Department</div>
+        <div class="stat-value" id="user-dept">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Clearance Level</div>
+        <div class="stat-value" id="user-clearance">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Token Expires</div>
+        <div class="stat-value" id="token-expiry">—</div>
+      </div>
+      <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="loadDashboard()">Refresh</button>
+    </div>
+  </div>
+
+  <!-- JWT Token Display -->
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <h3 style="margin-bottom: 0.5rem; color: var(--accent);">🪙 Your JWT Access Token</h3>
+    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">
+      This is the token stored in your HttpOnly cookie. It's sent automatically with every request.
+    </p>
+    <div id="jwt-display" style="background: var(--bg-deep); padding: 1rem; border-radius: 8px; font-family: var(--font-mono); font-size: 0.75rem; word-break: break-all; color: var(--text-muted);">
+      Token is stored in HttpOnly cookie — not accessible via JavaScript (XSS protection ✓)
+    </div>
+    <div class="edu-box" style="margin-top: 1rem;">
+      <strong>Why HttpOnly?</strong> JavaScript cannot read HttpOnly cookies, protecting your token from XSS attacks. This is a critical security best practice — even if an attacker injects malicious JS, they cannot steal your session token.
+    </div>
+  </div>
+
+  <!-- Demo Navigation -->
+  <h2 style="margin-bottom: 1rem; font-size: 1.3rem;">🧪 Authentication & Authorization Labs</h2>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+
+    <a href="/demo/hashing" class="card" style="text-decoration: none; transition: border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔑</div>
+      <h3 style="color: var(--accent); margin-bottom: 0.5rem;">Password Hashing</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Compare MD5, SHA-256, bcrypt, and Argon2id. See why salting matters.</p>
+      <div style="margin-top: 0.75rem;"><span class="badge badge-success">Interactive</span></div>
+    </a>
+
+    <a href="/demo/jwt" class="card" style="text-decoration: none; transition: border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">🪙</div>
+      <h3 style="color: var(--accent); margin-bottom: 0.5rem;">JWT Tokens</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Decode JWT structure, simulate tampering, and understand token security.</p>
+      <div style="margin-top: 0.75rem;"><span class="badge badge-warning">Attack Demo</span></div>
+    </a>
+
+    <a href="/demo/sessions" class="card" style="text-decoration: none; transition: border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">🍪</div>
+      <h3 style="color: var(--accent); margin-bottom: 0.5rem;">Sessions & Cookies</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Session-based auth vs JWT. Cookie flags: HttpOnly, Secure, SameSite.</p>
+      <div style="margin-top: 0.75rem;"><span class="badge badge-info">Comparison</span></div>
+    </a>
+
+    <a href="/demo/mfa" class="card" style="text-decoration: none; transition: border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">📱</div>
+      <h3 style="color: var(--accent); margin-bottom: 0.5rem;">Multi-Factor Auth</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Generate TOTP codes, verify them, simulate MFA bypass attempts.</p>
+      <div style="margin-top: 0.75rem;"><span class="badge badge-success">Live OTP</span></div>
+    </a>
+
+    <a href="/demo/rbac" class="card" style="text-decoration: none; transition: border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">👥</div>
+      <h3 style="color: var(--accent); margin-bottom: 0.5rem;">RBAC</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Role-Based Access Control with permission matrix visualization.</p>
+      <div style="margin-top: 0.75rem;"><span class="badge badge-info">Matrix View</span></div>
+    </a>
+
+    <a href="/demo/abac" class="card" style="text-decoration: none; transition: border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">🏷️</div>
+      <h3 style="color: var(--accent); margin-bottom: 0.5rem;">ABAC</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Attribute-Based Access Control. Dynamic policy evaluation.</p>
+      <div style="margin-top: 0.75rem;"><span class="badge badge-warning">Dynamic</span></div>
+    </a>
+
+    <a href="/demo/oauth" class="card" style="text-decoration: none; transition: border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔗</div>
+      <h3 style="color: var(--accent); margin-bottom: 0.5rem;">OAuth 2.0</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Simulate the full OAuth Authorization Code flow step by step.</p>
+      <div style="margin-top: 0.75rem;"><span class="badge badge-success">Flow Demo</span></div>
+    </a>
+
+    <a href="/demo/sso" class="card" style="text-decoration: none; transition: border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">🌐</div>
+      <h3 style="color: var(--accent); margin-bottom: 0.5rem;">Single Sign-On</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Login once, access multiple apps. OIDC ID Token demo.</p>
+      <div style="margin-top: 0.75rem;"><span class="badge badge-info">SSO Sim</span></div>
+    </a>
+
+    <a href="/demo/passwordless" class="card" style="text-decoration: none; transition: border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">✨</div>
+      <h3 style="color: var(--accent); margin-bottom: 0.5rem;">Passwordless Auth</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Magic links, passkeys explained, WebAuthn overview.</p>
+      <div style="margin-top: 0.75rem;"><span class="badge badge-success">Modern</span></div>
+    </a>
+
+    <a href="/demo/attacks" class="card" style="text-decoration: none; transition: border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚠️</div>
+      <h3 style="color: var(--accent); margin-bottom: 0.5rem;">Attack Simulator</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">SQL injection, brute force, IDOR, JWT tampering attacks.</p>
+      <div style="margin-top: 0.75rem;"><span class="badge badge-danger">Security Lab</span></div>
+    </a>
+
+  </div>
+
+  <!-- OWASP Checklist quick reference -->
+  <div class="card">
+    <h3 style="color: var(--accent); margin-bottom: 1rem;">✅ OWASP Authentication Checklist</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.5rem;">
+      {% set checks = [
+        ("Password hashing (Argon2id)", true),
+        ("Secure HttpOnly cookies", true),
+        ("JWT token expiration", true),
+        ("Refresh token rotation", true),
+        ("Account lockout (5 attempts)", true),
+        ("Rate limiting on auth endpoints", true),
+        ("Audit logging", true),
+        ("Password complexity validation", true),
+        ("CORS configuration", true),
+        ("Input validation (Pydantic)", true),
+        ("MFA support", true),
+        ("Secure password reset", true),
+      ] %}
+      {% for label, done in checks %}
+      <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+        <span style="color: {% if done %}var(--success){% else %}var(--danger){% endif %}; font-size: 1.1rem;">{% if done %}✓{% else %}✗{% endif %}</span>
+        <span style="color: {% if done %}var(--text){% else %}var(--text-muted){% endif %};">{{ label }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+async function loadDashboard() {
+  const user = await Auth.getUser();
+  if (!user) { window.location.href = '/login'; return; }
+
+  document.getElementById('username-display').textContent = user.username;
+  document.getElementById('user-role').textContent = user.role || '—';
+  document.getElementById('user-dept').textContent = user.department || '—';
+  document.getElementById('user-clearance').textContent = user.clearance_level ?? '—';
+
+  if (user.exp) {
+    const expDate = new Date(user.exp * 1000);
+    const now = new Date();
+    const diff = Math.round((expDate - now) / 1000);
+    document.getElementById('token-expiry').textContent = diff > 0 ? `in ${diff}s` : 'Expired';
+  }
+}
+loadDashboard();
+</script>
+{% endblock %}

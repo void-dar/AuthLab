@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}OAuth 2.0 Demo — AuthLab{% endblock %}
+{% block content %}
+<div class="container" style="padding: 2rem 1rem;">
+
+  <div class="page-header">
+    <h1>🔗 OAuth 2.0 Lab</h1>
+    <p>Simulate the complete Authorization Code Flow step-by-step.</p>
+  </div>
+
+  <div class="edu-box" style="margin-bottom: 2rem;">
+    <h3>What is OAuth 2.0?</h3>
+    <p>OAuth 2.0 is an <strong>authorization</strong> framework (not authentication!) that lets users grant third-party apps limited access to their account without sharing passwords. Example: "Login with Google" uses OAuth to give an app access to your Google profile.</p>
+    <p style="margin-top: 0.5rem;"><strong>Roles:</strong> Resource Owner (user), Client (the app), Authorization Server (e.g., Google), Resource Server (protected API)</p>
+  </div>
+
+  <!-- Step-by-step flow -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2 style="color: var(--accent); margin-bottom: 1.5rem;">⚡ Authorization Code Flow — Live Demo</h2>
+
+    <div id="oauth-steps">
+
+      <!-- Step 1 -->
+      <div class="oauth-step" id="step-1" style="background: var(--bg-deep); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
+          <h4 style="color: var(--accent);">Step 1: Client Registration</h4>
+          <span class="badge badge-info">Setup</span>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">The client app registers with the Authorization Server to get a client_id and client_secret.</p>
+        <div style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 6px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+          client_id: <span style="color:var(--accent)">demo-client-123</span><br>
+          client_secret: <span style="color:var(--accent)">[registered with auth server]</span><br>
+          redirect_uri: <span style="color:var(--accent)">http://localhost:8000/callback</span><br>
+          scopes: <span style="color:var(--accent)">profile email</span>
+        </div>
+        <button class="btn btn-primary" onclick="startOAuth()">Start OAuth Flow →</button>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="oauth-step" id="step-2" style="background: var(--bg-deep); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; opacity: 0.4;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
+          <h4 style="color: var(--accent);">Step 2: Authorization Request</h4>
+          <span class="badge badge-warning">Redirect</span>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.75rem;">User is redirected to Authorization Server to grant permissions.</p>
+        <div id="auth-url-display" style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 6px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); word-break: break-all;">
+          [URL will appear here]
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="oauth-step" id="step-3" style="background: var(--bg-deep); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; opacity: 0.4;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
+          <h4 style="color: var(--accent);">Step 3: Authorization Code Issued</h4>
+          <span class="badge badge-success">Server → Client</span>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.75rem;">After user approves, server redirects back with a short-lived authorization code.</p>
+        <div id="auth-code-display" style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 6px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">
+          [Authorization code will appear here]
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="oauth-step" id="step-4" style="background: var(--bg-deep); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; opacity: 0.4;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
+          <h4 style="color: var(--accent);">Step 4: Token Exchange</h4>
+          <span class="badge badge-info">Backend Only</span>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.75rem;">Client exchanges authorization code for access token. <strong>Never done in browser!</strong></p>
+        <div id="token-exchange-display" style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 6px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">
+          [Token exchange will appear here]
+        </div>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="oauth-step" id="step-5" style="background: var(--bg-deep); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; opacity: 0.4;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
+          <h4 style="color: var(--accent);">Step 5: Access Protected Resource</h4>
+          <span class="badge badge-success">Complete</span>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.75rem;">Client uses access token to call Resource Server API.</p>
+        <div id="resource-display" style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 6px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">
+          [Protected resource data will appear here]
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- OAuth vs OpenID Connect -->
+  <div class="card">
+    <h2 style="color: var(--accent); margin-bottom: 1rem;">🆚 OAuth 2.0 vs OpenID Connect</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; flex-wrap: wrap;">
+      <div style="background: rgba(0,212,255,0.08); border: 1px solid var(--accent); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--accent); margin-bottom: 0.5rem;">OAuth 2.0</h4>
+        <ul style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.7; padding-left: 1rem;">
+          <li>Handles <strong>Authorization</strong></li>
+          <li>"What can this app access?"</li>
+          <li>Issues Access Tokens</li>
+          <li>No standard user identity info</li>
+          <li>Example: GitHub API access</li>
+        </ul>
+      </div>
+      <div style="background: rgba(48,209,88,0.08); border: 1px solid var(--success); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--success); margin-bottom: 0.5rem;">OpenID Connect (OIDC)</h4>
+        <ul style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.7; padding-left: 1rem;">
+          <li>Handles <strong>Authentication</strong></li>
+          <li>"Who is this user?"</li>
+          <li>Issues ID Token + Access Token</li>
+          <li>Standardized user claims (sub, email, name)</li>
+          <li>Example: "Login with Google"</li>
+        </ul>
+      </div>
+    </div>
+    <div class="edu-box" style="margin-top: 1rem;">
+      <strong>Key insight:</strong> OIDC is built <em>on top of</em> OAuth 2.0. It adds an <strong>ID Token</strong> (a JWT containing user identity claims) to the standard OAuth flow. The <code>openid</code> scope triggers OIDC mode.
+    </div>
+  </div>
+
+</div>
+
+<script>
+let oauthState = {};
+
+async function startOAuth() {
+  try {
+    // Step 2: Get authorization URL (no redirect_uri needed — server uses registered default)
+    const data = await API.get('/api/demo/oauth/authorize?client_id=demo-client-123&scope=profile%20email&response_type=code&state=random-state-xyz');
+    activateStep('step-2');
+    document.getElementById('auth-url-display').innerHTML = `
+      <span style="color:var(--success)">GET</span> ${data.auth_url}<br><br>
+      <span style="color:var(--text-muted)">Parameters:</span><br>
+      &nbsp; client_id: <span style="color:var(--accent)">${data.params?.client_id || 'demo-client-123'}</span><br>
+      &nbsp; response_type: <span style="color:var(--accent)">code</span><br>
+      &nbsp; scope: <span style="color:var(--accent)">${data.params?.scope || 'profile email'}</span><br>
+      &nbsp; state: <span style="color:var(--accent)">${data.params?.state || 'random-state-xyz'}</span> <span style="color:var(--text-muted)">(CSRF protection)</span>
+    `;
+
+    // Step 3: Simulate user approving
+    await new Promise(r => setTimeout(r, 800));
+    activateStep('step-3');
+    const authCode = data.auth_code;
+    oauthState.authCode = authCode;
+    document.getElementById('auth-code-display').innerHTML = `
+      <span style="color:var(--text-muted)">Redirect to:</span> /callback?code=<span style="color:var(--warning)">${authCode}</span>&state=random-state-xyz<br><br>
+      <span style="color:var(--text-muted)">⚠️ Code valid for 60 seconds only! Single use!</span>
+    `;
+
+    // Step 4: Token exchange
+    await new Promise(r => setTimeout(r, 800));
+    activateStep('step-4');
+    const tokenData = await API.post('/api/demo/oauth/token', {
+      grant_type: 'authorization_code',
+      code: authCode,
+      client_id: 'demo-client-123',
+      client_secret: 'demo-secret'
+    });
+    document.getElementById('token-exchange-display').innerHTML = `
+      <span style="color:var(--text-muted)">POST /api/demo/oauth/token</span><br>
+      Body: grant_type=authorization_code, code=${authCode?.substring(0,8)}...<br><br>
+      Response:<br>
+      &nbsp; access_token: <span style="color:var(--success)">${(tokenData.access_token||'').substring(0,30)}...</span><br>
+      &nbsp; token_type: <span style="color:var(--accent)">Bearer</span><br>
+      &nbsp; expires_in: <span style="color:var(--accent)">${tokenData.expires_in}s</span><br>
+      ${tokenData.id_token ? `&nbsp; id_token: <span style="color:#bf5af2">[OIDC ID Token]</span>` : ''}
+    `;
+
+    // Step 5: Use token
+    await new Promise(r => setTimeout(r, 800));
+    activateStep('step-5');
+    document.getElementById('resource-display').innerHTML = `
+      <span style="color:var(--text-muted)">GET /api/demo/userinfo</span><br>
+      Authorization: Bearer ${(tokenData.access_token||'').substring(0,20)}...<br><br>
+      Response: <span style="color:var(--success)">200 OK</span><br>
+      ${renderJSON(tokenData.user_info || tokenData.id_token_claims || { note: "Protected resource data returned" })}
+    `;
+    Toast.success('OAuth flow completed!');
+  } catch(e) { Toast.error(e.message); }
+}
+
+function activateStep(stepId) {
+  document.getElementById(stepId).style.opacity = '1';
+  document.getElementById(stepId).style.borderColor = 'var(--accent)';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+{% block title %}Password Hashing Demo — AuthLab{% endblock %}
+{% block content %}
+<div class="container" style="padding: 2rem 1rem;">
+
+  <div class="page-header">
+    <h1>🔑 Password Hashing Lab</h1>
+    <p>Understand why passwords are never stored in plaintext — and which algorithms actually protect users.</p>
+  </div>
+
+  <!-- Education -->
+  <div class="edu-box" style="margin-bottom: 2rem;">
+    <h3>What is Password Hashing?</h3>
+    <p>A <strong>cryptographic hash function</strong> takes your password and produces a fixed-length fingerprint. The same input always produces the same output, but it's <em>computationally infeasible</em> to reverse — meaning you can't get the password back from the hash.</p>
+    <p style="margin-top: 0.5rem;">Modern systems add a <strong>salt</strong> (random data) before hashing, so two users with the same password get different hashes — defeating rainbow table attacks.</p>
+  </div>
+
+  <!-- Interactive Demo -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2 style="margin-bottom: 1rem; color: var(--accent);">⚡ Live Hashing Demo</h2>
+    <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 250px;">
+        <label class="form-label">Password to Hash</label>
+        <input type="text" id="hash-input" class="form-input" value="Password123!" placeholder="Enter any password">
+      </div>
+      <div style="display: flex; align-items: flex-end;">
+        <button class="btn btn-primary" onclick="runHashDemo()" id="hash-btn">Hash It →</button>
+      </div>
+    </div>
+    <div id="hash-results" style="display: none;">
+
+      <!-- Algorithm comparison table -->
+      <div style="overflow-x: auto;">
+        <table class="table" style="margin-bottom: 1rem;">
+          <thead>
+            <tr>
+              <th>Algorithm</th>
+              <th>Hash Output</th>
+              <th>Time (ms)</th>
+              <th>Security</th>
+            </tr>
+          </thead>
+          <tbody id="hash-table-body"></tbody>
+        </table>
+      </div>
+
+      <!-- Visualized flow -->
+      <div id="hash-flow" style="background: var(--bg-deep); padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem;"></div>
+
+      <!-- Security analysis -->
+      <div id="hash-analysis"></div>
+    </div>
+    <div id="hash-loading" style="display:none; color: var(--text-muted); padding: 1rem;">⏳ Hashing... (Argon2id intentionally slow)</div>
+  </div>
+
+  <!-- Password Strength Demo -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2 style="margin-bottom: 1rem; color: var(--accent);">💪 Password Strength Analyzer</h2>
+    <div class="edu-box" style="margin-bottom: 1rem;">
+      Password strength isn't just about length — it's about <strong>entropy</strong>: how many bits of randomness exist. A password like <code>correcthorsebatterystaple</code> (4 random words) has more entropy than <code>P@ssw0rd!</code>.
+    </div>
+    <input type="text" id="strength-input" class="form-input" style="margin-bottom: 1rem;" placeholder="Type a password to analyze..." oninput="analyzeStrength()">
+    <div id="strength-meter-bar" style="height: 8px; border-radius: 4px; background: var(--bg-deep); margin-bottom: 0.5rem; overflow: hidden;">
+      <div id="strength-fill" style="height: 100%; width: 0; transition: all 0.3s; border-radius: 4px;"></div>
+    </div>
+    <div id="strength-results" style="display:none; margin-top: 1rem;"></div>
+  </div>
+
+  <!-- Educational: Why Not MD5/SHA? -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2 style="margin-bottom: 1rem; color: var(--accent);">❌ Why MD5 & SHA-256 Are Wrong for Passwords</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+      <div style="background: rgba(255,59,48,0.1); border: 1px solid var(--danger); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--danger); margin-bottom: 0.5rem;">❌ MD5 / SHA-1 / SHA-256</h4>
+        <ul style="color: var(--text-muted); font-size: 0.9rem; padding-left: 1rem; line-height: 1.7;">
+          <li>Designed for speed — bad for passwords</li>
+          <li>Billions of hashes per second on GPU</li>
+          <li>Rainbow tables work without salts</li>
+          <li>MD5: completely broken for security</li>
+        </ul>
+      </div>
+      <div style="background: rgba(255,159,10,0.1); border: 1px solid var(--warning); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--warning); margin-bottom: 0.5rem;">⚠️ bcrypt</h4>
+        <ul style="color: var(--text-muted); font-size: 0.9rem; padding-left: 1rem; line-height: 1.7;">
+          <li>Designed for passwords — good!</li>
+          <li>Built-in salt — good!</li>
+          <li>Cost factor (work factor) — good!</li>
+          <li>64-char input limit — limitation</li>
+          <li>Not memory-hard — GPU can attack</li>
+        </ul>
+      </div>
+      <div style="background: rgba(48,209,88,0.1); border: 1px solid var(--success); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--success); margin-bottom: 0.5rem;">✅ Argon2id (Recommended)</h4>
+        <ul style="color: var(--text-muted); font-size: 0.9rem; padding-left: 1rem; line-height: 1.7;">
+          <li>Winner of Password Hashing Competition</li>
+          <li>Memory-hard (defeats GPU attacks)</li>
+          <li>Configurable: memory, time, parallelism</li>
+          <li>Resistant to side-channel attacks</li>
+          <li>OWASP #1 recommendation (2024)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Argon2 Parameters -->
+  <div class="card">
+    <h2 style="margin-bottom: 1rem; color: var(--accent);">⚙️ Argon2id Parameters Explained</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+      <div class="stat-card">
+        <div class="stat-label">Memory Cost</div>
+        <div class="stat-value" style="color: var(--accent);">65 MB</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">RAM required per hash. Defeats GPU farms.</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Time Cost</div>
+        <div class="stat-value" style="color: var(--accent);">3 passes</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">Number of iterations over memory.</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Parallelism</div>
+        <div class="stat-value" style="color: var(--accent);">1 thread</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">Parallel lanes. Scales with CPU cores.</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Salt Length</div>
+        <div class="stat-value" style="color: var(--accent);">16 bytes</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">Random per hash. Defeats rainbow tables.</div>
+      </div>
+    </div>
+    <div class="edu-box">
+      <strong>Real-world tuning:</strong> OWASP recommends Argon2id with at least 64MB memory, 3 iterations, and 1 degree of parallelism for interactive logins (target ~1 second per hash). Increase parameters as hardware improves.
+    </div>
+  </div>
+
+</div>
+
+<script>
+async function runHashDemo() {
+  console.log(`shit called`)
+  const password = document.getElementById('hash-input').value.trim();
+  if (!password) return;
+  setLoading(document.getElementById("hash-btn"), true);
+  document.getElementById('hash-loading').style.display = 'block';
+  document.getElementById('hash-results').style.display = 'none';
+
+  try {
+    const data = await API.post('/api/demo/hash', { password });
+    renderHashResults(password, data);
+    document.getElementById('hash-results').style.display = 'block';
+  } catch (e) {
+    Toast.error(e.message);
+  } finally {
+    setLoading(document.getElementById("hash-btn"), false);
+    document.getElementById('hash-loading').style.display = 'none';
+  }
+}
+
+function renderHashResults(password, data) {
+  const tbody = document.getElementById('hash-table-body');
+  const algs = data.algorithms || {};
+  const securityMap = {
+    md5: '<span class="badge badge-danger">BROKEN</span>',
+    sha256: '<span class="badge badge-danger">Insecure for PWs</span>',
+    sha256_salted: '<span class="badge badge-warning">Weak</span>',
+    bcrypt: '<span class="badge badge-warning">Acceptable</span>',
+    argon2id: '<span class="badge badge-success">Recommended</span>',
+  };
+  tbody.innerHTML = Object.entries(algs).map(([name, info]) => `
+    <tr>
+      <td><code>${name.replace('_', ' ')}</code></td>
+      <td style="font-family: var(--font-mono); font-size: 0.7rem; word-break: break-all; max-width: 300px; color: var(--accent);">${(info.hash||'').substring(0, 60)}${(info.hash||'').length > 60 ? '…' : ''}</td>
+      <td style="color: ${(info.time_ms||0) > 100 ? 'var(--success)' : (info.time_ms||0) > 10 ? 'var(--warning)' : 'var(--danger)'};">${(info.time_ms||0).toFixed(1)}</td>
+      <td>${securityMap[name] || ''}</td>
+    </tr>
+  `).join('');
+
+  // Flow visualization
+  const flow = document.getElementById('hash-flow');
+  const arg = algs.argon2id || {};
+  flow.innerHTML = `
+    <h4 style="color: var(--accent); margin-bottom: 1rem;">Argon2id Hashing Flow</h4>
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+      <div style="background: rgba(0,212,255,0.15); border: 1px solid var(--accent); border-radius: 6px; padding: 0.5rem 1rem;">
+        🔑 Password<br><code style="font-size:0.75rem;">"${password}"</code>
+      </div>
+      <div style="color: var(--text-muted);">+</div>
+      <div style="background: rgba(255,159,10,0.15); border: 1px solid var(--warning); border-radius: 6px; padding: 0.5rem 1rem;">
+        🎲 Random Salt<br><code style="font-size:0.75rem;">16 random bytes</code>
+      </div>
+      <div style="color: var(--text-muted);">→</div>
+      <div style="background: rgba(48,209,88,0.1); border: 1px solid var(--success); border-radius: 6px; padding: 0.5rem 1rem;">
+        ⚙️ Argon2id<br><code style="font-size:0.75rem;">65MB RAM, 3 passes</code>
+      </div>
+      <div style="color: var(--text-muted);">→</div>
+      <div style="background: rgba(48,209,88,0.15); border: 1px solid var(--success); border-radius: 6px; padding: 0.5rem 1rem; word-break: break-all; max-width: 300px;">
+        🔒 Hash<br><code style="font-size:0.7rem; color: var(--success);">${(arg.hash||'').substring(0, 50)}…</code>
+      </div>
+    </div>
+    <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 1rem;">⏱️ Argon2id time: <strong style="color:var(--success)">${(arg.time_ms||0).toFixed(1)}ms</strong> — intentionally slow to defeat brute-force</p>
+  `;
+
+  // Analysis
+  if (data.analysis && data.analysis.length) {
+    const a = document.getElementById('hash-analysis');
+    a.innerHTML = `<div class="edu-box"><strong>Security Observations:</strong><br>${data.analysis.map(obs => `• ${obs}`).join('<br>')}</div>`;
+  }
+}
+
+async function analyzeStrength() {
+  const password = document.getElementById('strength-input').value;
+  if (!password) {
+    document.getElementById('strength-results').style.display = 'none';
+    document.getElementById('strength-fill').style.width = '0';
+    return;
+  }
+  try {
+    const data = await API.post('/api/demo/password-strength', { password });
+    const colors = ['var(--danger)', 'var(--danger)', 'var(--warning)', 'var(--warning)', 'var(--success)'];
+    const score = data.score || 0;
+    document.getElementById('strength-fill').style.width = `${(score / 4) * 100}%`;
+    document.getElementById('strength-fill').style.background = colors[score];
+
+    const levels = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+    const r = document.getElementById('strength-results');
+    r.style.display = 'block';
+    r.innerHTML = `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+        <div class="stat-card"><div class="stat-label">Score</div><div class="stat-value" style="color:${colors[score]}">${data.level || levels[score]}</div></div>
+        <div class="stat-card"><div class="stat-label">Entropy</div><div class="stat-value">${(data.entropy||0).toFixed(1)} bits</div></div>
+        <div class="stat-card"><div class="stat-label">Length</div><div class="stat-value">${data.length || password.length} chars</div></div>
+        <div class="stat-card"><div class="stat-label">Crack Time</div><div class="stat-value" style="font-size:0.9rem">${data.crack_time || '—'}</div></div>
+      </div>
+      ${data.feedback?.length ? `<div class="edu-box"><strong>Suggestions:</strong><br>${data.feedback.map(f=>`• ${f}`).join('<br>')}</div>` : ''}
+    `;
+  } catch(e) {}
+}
+
+// Run on load with default
+document.addEventListener('DOMContentLoaded', () => { runHashDemo(); });
+</script>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div style="min-height: calc(100vh - 60px); display: flex; align-items: center; justify-content: center; padding: 2rem;">
+  <div style="width: 100%; max-width: 480px;">
+
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <div style="font-size: 3rem; margin-bottom: 0.5rem;">🛡️</div>
+      <h1 style="font-size: 1.6rem; margin-bottom: 0.4rem;">Create Account</h1>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Join AuthLab to access all interactive demos</p>
+    </div>
+
+    <div class="card">
+      <div id="reg-message" class="hidden"></div>
+
+      <div class="two-col">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input type="text" id="username" class="form-input" placeholder="yourname" oninput="checkUsername()">
+          <div id="username-hint" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem;">3-30 chars, letters/numbers/underscores</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" id="full_name" class="form-input" placeholder="Your Name">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" id="email" class="form-input" placeholder="you@example.com">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="password" class="form-input" placeholder="Min 8 chars" oninput="updateStrength()">
+        <div class="strength-bar-track mt-1">
+          <div class="strength-bar-fill" id="strength-bar" style="width: 0%; background: var(--accent-red);"></div>
+        </div>
+        <div id="strength-label" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;"></div>
+        <div id="strength-issues" style="font-size: 0.75rem; color: var(--accent-amber); margin-top: 0.25rem;"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Confirm Password</label>
+        <input type="password" id="confirm_password" class="form-input" placeholder="Repeat password" oninput="checkMatch()">
+        <div id="match-hint" style="font-size: 0.75rem; margin-top: 0.3rem;"></div>
+      </div>
+
+      <button class="btn btn-primary btn-block btn-lg mt-2" id="reg-btn" onclick="doRegister()">
+        Create Account
+      </button>
+
+      <div style="margin-top: 1rem; text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+        Already have an account? <a href="/login">Sign in</a>
+      </div>
+    </div>
+
+    <div class="edu-box mt-2">
+      <h4>What happens when you register</h4>
+      <ul>
+        <li>Password is analyzed for strength in real-time</li>
+        <li>Password is hashed with <strong>Argon2id</strong> (never stored plaintext)</li>
+        <li>Account is assigned the <strong>user</strong> role</li>
+        <li>Registration event is written to the audit log</li>
+        <li>In production: email verification would be sent</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let strengthData = null;
+
+async function updateStrength() {
+  const pwd = document.getElementById('password').value;
+  const bar = document.getElementById('strength-bar');
+  const label = document.getElementById('strength-label');
+  const issues = document.getElementById('strength-issues');
+
+  if (!pwd) {
+    bar.style.width = '0%';
+    label.textContent = '';
+    issues.textContent = '';
+    return;
+  }
+
+  try {
+    const data = await API.post('/api/demo/password-strength', { password: pwd });
+    strengthData = data;
+    bar.style.width = data.score + '%';
+    bar.style.background = data.color;
+    label.style.color = data.color;
+    label.textContent = `${data.level} — ${data.entropy_bits} bits of entropy`;
+    issues.textContent = data.issues.length > 0 ? '• ' + data.issues.join(' • ') : '';
+  } catch {}
+}
+
+function checkMatch() {
+  const pwd = document.getElementById('password').value;
+  const confirm = document.getElementById('confirm_password').value;
+  const hint = document.getElementById('match-hint');
+  if (!confirm) { hint.textContent = ''; return; }
+  if (pwd === confirm) {
+    hint.style.color = 'var(--accent-green)';
+    hint.textContent = '✓ Passwords match';
+  } else {
+    hint.style.color = 'var(--accent-red)';
+    hint.textContent = '✗ Passwords do not match';
+  }
+}
+
+function checkUsername() {
+  const val = document.getElementById('username').value;
+  const hint = document.getElementById('username-hint');
+  const valid = /^[a-zA-Z0-9_]{3,30}$/.test(val);
+  if (val.length === 0) { hint.textContent = '3-30 chars, letters/numbers/underscores'; hint.style.color = ''; return; }
+  hint.style.color = valid ? 'var(--accent-green)' : 'var(--accent-amber)';
+  hint.textContent = valid ? '✓ Valid username' : '✗ Only letters, numbers, underscores (3-30 chars)';
+}
+
+async function doRegister() {
+  const btn = document.getElementById('reg-btn');
+  const username = document.getElementById('username').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const confirm = document.getElementById('confirm_password').value;
+  const full_name = document.getElementById('full_name').value.trim();
+
+  if (!username || !email || !password) {
+    showError('reg-message', 'Please fill in all required fields');
+    return;
+  }
+  if (password !== confirm) {
+    showError('reg-message', 'Passwords do not match');
+    return;
+  }
+
+  setLoading(btn, true);
+  clearMessage('reg-message');
+
+  try {
+    const data = await API.post('/api/auth/register', { username, email, password, full_name });
+    Toast.success('Account created! Logging you in...');
+    // Auto-login
+    await API.post('/api/auth/login', { username, password });
+    setTimeout(() => window.location.href = '/dashboard', 800);
+  } catch (err) {
+    showError('reg-message', err.message);
+    setLoading(btn, false);
+  }
+}
+</script>
+{% endblock %}

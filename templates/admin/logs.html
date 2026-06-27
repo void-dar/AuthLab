@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Audit Logs — AuthLab Admin{% endblock %}
+{% block content %}
+<div class="container" style="padding: 2rem 1rem;">
+
+  <div class="page-header">
+    <a href="/admin" style="color: var(--text-muted); font-size: 0.85rem; text-decoration: none;">← Admin</a>
+    <h1>📋 Audit Logs</h1>
+    <p>Immutable security event log — every authentication and authorization event recorded.</p>
+  </div>
+
+  <div class="edu-box" style="margin-bottom: 2rem;">
+    <strong>Why Audit Logs?</strong> Security standards (PCI-DSS, SOC2, HIPAA) require logging all authentication events. Logs should be <em>append-only</em> — never update or delete. They enable incident response, forensic analysis, and compliance auditing.
+  </div>
+
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+      <h3 style="color: var(--accent);">Security Events</h3>
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+        <select id="event-filter" class="form-input" style="padding:0.4rem 0.75rem; width:auto;" onchange="loadLogs()">
+          <option value="">All Events</option>
+          <option value="login_success">Login Success</option>
+          <option value="login_failed">Login Failed</option>
+          <option value="logout">Logout</option>
+          <option value="token_refreshed">Token Refresh</option>
+          <option value="password_reset">Password Reset</option>
+          <option value="account_locked">Account Locked</option>
+          <option value="role_changed">Role Changed</option>
+        </select>
+        <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="loadLogs()">Refresh</button>
+      </div>
+    </div>
+    <div id="logs-table" style="overflow-x: auto;">
+      <p style="color: var(--text-muted);">Loading logs...</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const eventColors = {
+  login_success: 'badge-success',
+  login_failed: 'badge-danger',
+  logout: 'badge-info',
+  token_refreshed: 'badge-info',
+  password_reset: 'badge-warning',
+  account_locked: 'badge-danger',
+  role_changed: 'badge-warning',
+  register: 'badge-success',
+};
+
+async function loadLogs() {
+  const filter = document.getElementById('event-filter').value;
+  try {
+    const url = `/api/admin/logs${filter ? `?event_type=${filter}` : ''}`;
+    const data = await API.get(url);
+    const logs = data.logs || [];
+    const el = document.getElementById('logs-table');
+
+    if (!logs.length) {
+      el.innerHTML = '<p style="color:var(--text-muted)">No events found.</p>';
+      return;
+    }
+
+    el.innerHTML = `<table class="table">
+      <thead>
+        <tr><th>Timestamp</th><th>Event</th><th>User</th><th>IP</th><th>Details</th></tr>
+      </thead>
+      <tbody>
+        ${logs.map(log => `
+          <tr>
+            <td style="font-size:0.8rem; color:var(--text-muted); white-space:nowrap;">${new Date(log.created_at).toLocaleString()}</td>
+            <td><span class="badge ${eventColors[log.event_type] || 'badge-info'}">${log.event_type}</span></td>
+            <td>${log.username ? `<code>${log.username}</code>` : '<span style="color:var(--text-muted)">—</span>'}</td>
+            <td style="font-family:var(--font-mono); font-size:0.8rem; color:var(--text-muted);">${log.ip_address || '—'}</td>
+            <td style="font-size:0.82rem; color:var(--text-muted); max-width:300px;">${log.details || '—'}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+  } catch(e) { Toast.error(e.message); }
+}
+
+loadLogs();
+</script>
+{% endblock %}

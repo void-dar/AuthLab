@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Sessions & Cookies — AuthLab{% endblock %}
+{% block content %}
+<div class="container" style="padding: 2rem 1rem;">
+
+  <div class="page-header">
+    <h1>🍪 Sessions & Cookies Lab</h1>
+    <p>Understand session-based auth, cookie security flags, and how they compare to JWT.</p>
+  </div>
+
+  <!-- Session vs JWT comparison -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2 style="color: var(--accent); margin-bottom: 1rem;">Session-Based vs JWT Authentication</h2>
+    <div style="overflow-x: auto;">
+      <table class="table">
+        <thead>
+          <tr><th>Aspect</th><th>Session-Based</th><th>JWT (Stateless)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>State</td><td>Server stores session</td><td>Client holds token</td></tr>
+          <tr><td>Scalability</td><td>Needs shared session store</td><td>Scales easily (stateless)</td></tr>
+          <tr><td>Revocation</td><td>Instant (delete session)</td><td>Must wait for expiry</td></tr>
+          <tr><td>Storage</td><td>Session ID in cookie</td><td>JWT in HttpOnly cookie</td></tr>
+          <tr><td>Database hits</td><td>Every request</td><td>Only on refresh</td></tr>
+          <tr><td>Best for</td><td>Traditional web apps</td><td>APIs & microservices</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Cookie flags -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2 style="color: var(--accent); margin-bottom: 1rem;">🏴 Cookie Security Flags</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+
+      <div style="background: rgba(48,209,88,0.1); border: 1px solid var(--success); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--success); margin-bottom: 0.5rem;"><code>HttpOnly</code></h4>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">JavaScript <strong>cannot read</strong> this cookie. Protects against XSS attacks stealing session tokens.</p>
+        <div style="margin-top: 0.5rem; font-size: 0.8rem; background: var(--bg-deep); padding: 0.5rem; border-radius: 4px; font-family: var(--font-mono);">
+          Set-Cookie: session=abc; HttpOnly
+        </div>
+      </div>
+
+      <div style="background: rgba(48,209,88,0.1); border: 1px solid var(--success); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--success); margin-bottom: 0.5rem;"><code>Secure</code></h4>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Cookie only sent over <strong>HTTPS</strong>. Prevents token interception over HTTP (network sniffing).</p>
+        <div style="margin-top: 0.5rem; font-size: 0.8rem; background: var(--bg-deep); padding: 0.5rem; border-radius: 4px; font-family: var(--font-mono);">
+          Set-Cookie: session=abc; Secure
+        </div>
+      </div>
+
+      <div style="background: rgba(48,209,88,0.1); border: 1px solid var(--success); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--success); margin-bottom: 0.5rem;"><code>SameSite=Strict</code></h4>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Cookie NOT sent on cross-site requests. Defeats <strong>CSRF attacks</strong> — attacker's page can't trigger requests with your cookies.</p>
+        <div style="margin-top: 0.5rem; font-size: 0.8rem; background: var(--bg-deep); padding: 0.5rem; border-radius: 4px; font-family: var(--font-mono);">
+          Set-Cookie: session=abc; SameSite=Strict
+        </div>
+      </div>
+
+      <div style="background: rgba(255,159,10,0.1); border: 1px solid var(--warning); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--warning); margin-bottom: 0.5rem;"><code>SameSite=Lax</code></h4>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Sent on top-level navigations (clicking links) but NOT on subresource requests. Balance between security and usability.</p>
+        <div style="margin-top: 0.5rem; font-size: 0.8rem; background: var(--bg-deep); padding: 0.5rem; border-radius: 4px; font-family: var(--font-mono);">
+          Set-Cookie: session=abc; SameSite=Lax
+        </div>
+      </div>
+
+      <div style="background: rgba(255,59,48,0.1); border: 1px solid var(--danger); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--danger); margin-bottom: 0.5rem;"><code>No Flags</code> ❌</h4>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Cookie readable by JS (XSS), sent over HTTP (sniffable), sent cross-site (CSRF). <strong>Never do this for auth cookies.</strong></p>
+        <div style="margin-top: 0.5rem; font-size: 0.8rem; background: var(--bg-deep); padding: 0.5rem; border-radius: 4px; font-family: var(--font-mono);">
+          Set-Cookie: session=abc ← vulnerable!
+        </div>
+      </div>
+
+      <div style="background: rgba(48,209,88,0.1); border: 1px solid var(--success); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--success); margin-bottom: 0.5rem;">✅ AuthLab Cookie</h4>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">This app uses all recommended flags.</p>
+        <div style="margin-top: 0.5rem; font-size: 0.75rem; background: var(--bg-deep); padding: 0.5rem; border-radius: 4px; font-family: var(--font-mono); word-break: break-all;">
+          Set-Cookie: access_token=...; HttpOnly; Secure; SameSite=lax; Path=/
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Session lifecycle -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2 style="color: var(--accent); margin-bottom: 1rem;">🔄 Session Lifecycle</h2>
+    <div style="background: var(--bg-deep); padding: 1.5rem; border-radius: 8px;">
+      <div class="flow-step">
+        <div class="flow-icon">1️⃣</div>
+        <div><strong>Login</strong> — User submits credentials. Server verifies password hash.</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="flow-icon">2️⃣</div>
+        <div><strong>Session Created</strong> — Server generates random session ID, stores <code>{session_id → user_data}</code> in DB/Redis.</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="flow-icon">3️⃣</div>
+        <div><strong>Cookie Set</strong> — Session ID sent to browser as HttpOnly cookie.</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step">
+        <div class="flow-icon">4️⃣</div>
+        <div><strong>Requests</strong> — Browser sends cookie automatically. Server looks up session ID, retrieves user.</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-step" style="border-color: var(--danger);">
+        <div class="flow-icon">5️⃣</div>
+        <div><strong>Logout / Expiry</strong> — Server <em>deletes</em> session record. Old session ID is now invalid immediately.</div>
+      </div>
+    </div>
+    <div class="edu-box" style="margin-top: 1rem;">
+      <strong>Key difference from JWT:</strong> In session-based auth, the server controls session validity. Logout is instant. With JWT, you must wait for the token to expire — unless you implement a blocklist (which adds statefulness back).
+    </div>
+  </div>
+
+  <!-- Attack: Session Fixation -->
+  <div class="card">
+    <h2 style="color: var(--danger); margin-bottom: 1rem;">⚠️ Attack: Session Fixation</h2>
+    <p style="color: var(--text-muted); margin-bottom: 1rem;">An attacker sets a known session ID in the victim's browser before they log in, then uses that same ID to hijack the session after the victim authenticates.</p>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; flex-wrap: wrap;">
+      <div style="background: rgba(255,59,48,0.1); border: 1px solid var(--danger); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--danger); margin-bottom: 0.5rem;">❌ Vulnerable</h4>
+        <pre style="font-size: 0.8rem; color: var(--text-muted); white-space: pre-wrap;"># Server reuses pre-login session ID
+session_id = request.cookies.get("session") 
+if session_id is None:
+    session_id = generate_id()
+# Attacker sets session_id=known_value
+# After victim logs in: attacker has access</pre>
+      </div>
+      <div style="background: rgba(48,209,88,0.1); border: 1px solid var(--success); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--success); margin-bottom: 0.5rem;">✅ Secure (AuthLab)</h4>
+        <pre style="font-size: 0.8rem; color: var(--text-muted); white-space: pre-wrap;"># Always generate NEW session ID on login
+# Old session IDs are invalidated
+session_id = secrets.token_urlsafe(32)
+db.create_session(user_id, session_id)
+# Attacker's known ID no longer valid</pre>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

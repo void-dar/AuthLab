@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}ABAC Demo — AuthLab{% endblock %}
+{% block content %}
+<div class="container" style="padding: 2rem 1rem;">
+
+  <div class="page-header">
+    <h1>🏷️ Attribute-Based Access Control Lab</h1>
+    <p>Dynamic authorization using user attributes — department, clearance level, age, country, membership.</p>
+  </div>
+
+  <div class="edu-box" style="margin-bottom: 2rem;">
+    <h3>ABAC vs RBAC</h3>
+    <p>RBAC grants access based on <em>who you are</em> (your role). ABAC grants access based on <em>your attributes</em> and <em>context</em>. ABAC enables fine-grained policies like: <em>"Allow access if department=Finance AND clearance≥3 AND country=US"</em> — impossible to express with roles alone.</p>
+  </div>
+
+  <!-- Policy Evaluator -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2 style="color: var(--accent); margin-bottom: 1rem;">⚡ Live Policy Evaluator</h2>
+    <p style="color: var(--text-muted); margin-bottom: 1rem;">Select a user and see which ABAC policies they satisfy based on their attributes.</p>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+      <div style="flex: 1; min-width: 200px;">
+        <label class="form-label">User</label>
+        <select id="abac-user" class="form-input" onchange="evaluateABAC()">
+          <option value="admin">admin (Finance, Level 5, US, Premium)</option>
+          <option value="alice">alice (Engineering, Level 2, NG, Basic)</option>
+          <option value="bob">bob (HR, Level 1, UK, Basic)</option>
+          <option value="staff1">staff1 (Finance, Level 3, US, Premium)</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="evaluateABAC()">Evaluate Policies →</button>
+    <div id="abac-output" style="margin-top: 1.5rem;"></div>
+  </div>
+
+  <!-- Policy Definitions -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2 style="color: var(--accent); margin-bottom: 1rem;">📋 Policy Definitions</h2>
+    <div style="display: grid; gap: 1rem;">
+
+      <div style="background: var(--bg-deep); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--warning); margin-bottom: 0.5rem;">Financial Reports</h4>
+        <code style="font-size: 0.85rem; color: var(--text-muted);">department == "Finance" AND clearance_level >= 3</code>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">Only Finance department staff with at least level 3 clearance can view financial reports.</p>
+      </div>
+
+      <div style="background: var(--bg-deep); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--warning); margin-bottom: 0.5rem;">Adult Content</h4>
+        <code style="font-size: 0.85rem; color: var(--text-muted);">age >= 18</code>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">Age-gated content accessible only to users 18 and above.</p>
+      </div>
+
+      <div style="background: var(--bg-deep); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--warning); margin-bottom: 0.5rem;">US Geo-Restriction</h4>
+        <code style="font-size: 0.85rem; color: var(--text-muted);">country == "US"</code>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">Content licensed only for the United States (DMCA/licensing compliance).</p>
+      </div>
+
+      <div style="background: var(--bg-deep); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--warning); margin-bottom: 0.5rem;">Premium Features</h4>
+        <code style="font-size: 0.85rem; color: var(--text-muted);">membership_status == "premium"</code>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">Paid features restricted to premium subscribers.</p>
+      </div>
+
+      <div style="background: var(--bg-deep); border-radius: 8px; padding: 1rem;">
+        <h4 style="color: var(--warning); margin-bottom: 0.5rem;">Engineering Tools</h4>
+        <code style="font-size: 0.85rem; color: var(--text-muted);">department IN ["Engineering", "DevOps"] AND clearance_level >= 2</code>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">Internal developer tools accessible only to engineering staff.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RBAC vs ABAC -->
+  <div class="card">
+    <h2 style="color: var(--accent); margin-bottom: 1rem;">📊 RBAC vs ABAC Comparison</h2>
+    <div style="overflow-x: auto;">
+      <table class="table">
+        <thead><tr><th>Aspect</th><th>RBAC</th><th>ABAC</th></tr></thead>
+        <tbody>
+          <tr><td>Complexity</td><td>Simple</td><td>Complex</td></tr>
+          <tr><td>Granularity</td><td>Role-level</td><td>Attribute-level</td></tr>
+          <tr><td>Flexibility</td><td>Limited</td><td>Highly flexible</td></tr>
+          <tr><td>Auditability</td><td>Easy</td><td>Moderate</td></tr>
+          <tr><td>Best for</td><td>Simple hierarchies</td><td>Dynamic, complex rules</td></tr>
+          <tr><td>Real-world use</td><td>Most web apps</td><td>Healthcare, Government, Finance</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="edu-box" style="margin-top: 1rem;">
+      <strong>In practice:</strong> Most systems combine RBAC and ABAC. Start with RBAC for simplicity, add ABAC policies for special cases. AWS IAM, Azure AD, and Google Cloud all use ABAC-style policies internally.
+    </div>
+  </div>
+
+</div>
+
+<script>
+async function evaluateABAC() {
+  const username = document.getElementById('abac-user').value;
+  try {
+    const data = await API.get(`/api/demo/abac/evaluate?username=${username}`);
+    const out = document.getElementById('abac-output');
+
+    const userAttrs = data.user_attributes || {};
+    const policies = data.policies || [];
+
+    out.innerHTML = `
+      <div class="card" style="margin-bottom:1rem; background:var(--bg-deep);">
+        <h4 style="color:var(--accent); margin-bottom:0.75rem;">Attributes for: ${userAttrs.username || username}</h4>
+        <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
+          ${Object.entries(userAttrs).filter(([k]) => k !== 'username').map(([k,v]) =>
+            `<div style="background:rgba(0,212,255,0.1); border:1px solid var(--accent); border-radius:6px; padding:0.35rem 0.75rem; font-size:0.85rem;">
+              <span style="color:var(--text-muted)">${k.replace(/_/g,' ')}:</span> <strong style="color:var(--accent)">${v}</strong>
+            </div>`
+          ).join('')}
+        </div>
+      </div>
+      <div style="display:grid; gap:0.75rem;">
+        ${policies.map(p => `
+          <div style="background:var(--bg-deep); border:1px solid ${p.allowed ? 'var(--success)' : 'var(--danger)'}; border-radius:8px; padding:1rem; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.5rem;">
+            <div style="flex:1; min-width:200px;">
+              <div style="font-weight:600; margin-bottom:0.25rem;">${p.policy_name}</div>
+              <div style="font-size:0.8rem; color:var(--text-muted); font-family:var(--font-mono); margin-bottom:0.25rem;">${p.rule}</div>
+              <div style="font-size:0.82rem; color:var(--text-muted);">${p.reason}</div>
+            </div>
+            <span class="badge ${p.allowed ? 'badge-success' : 'badge-danger'}" style="white-space:nowrap;">${p.allowed ? '✅ ALLOW' : '❌ DENY'}</span>
+          </div>`).join('')}
+      </div>`;
+  } catch(e) { Toast.error(e.message); }
+}
+
+document.addEventListener('DOMContentLoaded', evaluateABAC);
+</script>
+{% endblock %}

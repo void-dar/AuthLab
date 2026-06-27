@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Token Manager — AuthLab Admin{% endblock %}
+{% block content %}
+<div class="container" style="padding: 2rem 1rem;">
+
+  <div class="page-header">
+    <a href="/admin" style="color: var(--text-muted); font-size: 0.85rem; text-decoration: none;">← Admin</a>
+    <h1>🪙 Token Manager</h1>
+    <p>View and revoke active JWT refresh tokens and sessions.</p>
+  </div>
+
+  <div class="edu-box" style="margin-bottom: 2rem;">
+    <strong>Token Revocation:</strong> JWT access tokens are stateless and can't be individually revoked (they expire in 15 min). Refresh tokens <em>are</em> stored in the database and can be revoked instantly. Revoking a refresh token forces the user to re-authenticate.
+  </div>
+
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+      <h3 style="color: var(--accent);">Active Refresh Tokens</h3>
+      <button class="btn btn-secondary" style="font-size:0.8rem;" onclick="loadTokens()">Refresh</button>
+    </div>
+    <div id="tokens-table" style="overflow-x: auto;">
+      <p style="color: var(--text-muted);">Loading tokens...</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+async function loadTokens() {
+  try {
+    const data = await API.get('/api/admin/tokens');
+    const tokens = data.tokens || [];
+    const el = document.getElementById('tokens-table');
+
+    if (!tokens.length) {
+      el.innerHTML = '<p style="color:var(--text-muted)">No active refresh tokens.</p>';
+      return;
+    }
+
+    el.innerHTML = `<table class="table">
+      <thead>
+        <tr><th>ID</th><th>User</th><th>Created</th><th>Expires</th><th>Status</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        ${tokens.map(t => {
+          const expired = new Date(t.expires_at) < new Date();
+          return `
+          <tr>
+            <td style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-muted);">#${t.id}</td>
+            <td><code>${t.username || t.user_id}</code></td>
+            <td style="font-size:0.8rem; color:var(--text-muted);">${new Date(t.created_at).toLocaleDateString()}</td>
+            <td style="font-size:0.8rem; color:${expired ? 'var(--danger)' : 'var(--text-muted)'};">${new Date(t.expires_at).toLocaleDateString()}</td>
+            <td>
+              ${t.is_revoked ? '<span class="badge badge-danger">Revoked</span>' :
+                expired ? '<span class="badge badge-warning">Expired</span>' :
+                '<span class="badge badge-success">Active</span>'}
+            </td>
+            <td>
+              ${!t.is_revoked && !expired ? `
+                <button class="btn btn-danger" style="font-size:0.75rem; padding:0.3rem 0.6rem;" onclick="revokeToken(${t.id})">Revoke</button>
+              ` : '—'}
+            </td>
+          </tr>`}).join('')}
+      </tbody>
+    </table>
+    <p style="color:var(--text-muted); font-size:0.85rem; margin-top:0.75rem;">Total: ${tokens.length} tokens</p>`;
+  } catch(e) { Toast.error(e.message); }
+}
+
+async function revokeToken(tokenId) {
+  if (!confirm('Revoke this refresh token? The user will be forced to log in again.')) return;
+  try {
+    await API.delete(`/api/admin/tokens/${tokenId}`);
+    Toast.success('Token revoked!');
+    loadTokens();
+  } catch(e) { Toast.error(e.message); }
+}
+
+loadTokens();
+</script>
+{% endblock %}

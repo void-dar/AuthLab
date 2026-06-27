@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="page-content">
+
+  <!-- Hero -->
+  <div style="text-align: center; padding: 3rem 0 2rem;">
+    <div style="font-family: var(--font-code); font-size: 0.8rem; color: var(--accent-cyan); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 1rem;">
+      🎓 University Educational Platform
+    </div>
+    <h1 style="font-size: 3rem; background: linear-gradient(135deg, #e2e8f0, #00d4ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 1rem;">
+      Authentication &amp; Authorization Lab
+    </h1>
+    <p style="font-size: 1.1rem; color: var(--text-secondary); max-width: 600px; margin: 0 auto 2rem;">
+      An interactive laboratory demonstrating every modern auth concept — with live code, attack simulations, and security analysis.
+    </p>
+    <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+      <a href="/register" class="btn btn-primary btn-lg">Get Started →</a>
+      <a href="/login" class="btn btn-secondary btn-lg">Login with Demo Account</a>
+      <a href="/api/docs" class="btn btn-ghost btn-lg">API Docs</a>
+    </div>
+  </div>
+
+  <!-- Demo Credentials -->
+  <div class="card card-accent" style="margin-bottom: 2rem; max-width: 800px; margin-left: auto; margin-right: auto;">
+    <div class="card-header">
+      <div class="card-icon">🔑</div>
+      <div>
+        <div class="card-title">Demo Credentials</div>
+        <div class="card-subtitle">Pre-seeded accounts for testing all roles</div>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+      {% for role, color in [('admin', 'red'), ('moderator', 'amber'), ('staff', 'purple'), ('alice', 'cyan'), ('bob', 'green')] %}
+      <div style="background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem;">
+        <div style="margin-bottom: 0.4rem;"><span class="badge badge-{{ role if role in ['admin', 'moderator', 'staff'] else 'user' }}">{{ role }}</span></div>
+        <div style="font-family: var(--font-code); font-size: 0.75rem; color: var(--text-secondary);">
+          user: <span style="color: var(--text-code);">{{ role }}</span><br>
+          pass: <span style="color: var(--text-code);">Password123!</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Feature Grid -->
+  <h2 style="margin-bottom: 1.25rem;">Interactive Demonstrations</h2>
+  <div class="three-col" style="margin-bottom: 2.5rem;">
+
+    {% set features = [
+      ('🔐', 'Password Hashing', '/demo/hashing', 'Compare MD5, SHA-256, bcrypt, and Argon2id side-by-side. See why "slowness" is a security feature.', 'badge-green', 'Authentication'),
+      ('🪙', 'JWT Tokens', '/demo/jwt', 'Decode JWTs, visualize all 3 parts, attempt tampering attacks, and watch signature verification fail.', 'badge-cyan', 'Authentication'),
+      ('📱', 'Multi-Factor Auth', '/demo/mfa', 'Generate and verify OTP codes. Understand TOTP vs HOTP and how MFA eliminates credential theft risk.', 'badge-purple', 'Authentication'),
+      ('👤', 'RBAC', '/demo/rbac', 'Role-Based Access Control with 5 tiers. See the permission matrix and try escalation attacks.', 'badge-amber', 'Authorization'),
+      ('🎯', 'ABAC', '/demo/abac', 'Attribute-Based policies: department, clearance, age, country, membership. Dynamic runtime decisions.', 'badge-amber', 'Authorization'),
+      ('🔗', 'OAuth 2.0', '/demo/oauth', 'Full Authorization Code Flow simulation. Step-by-step: authorization code → token exchange → API access.', 'badge-cyan', 'Federation'),
+      ('🌐', 'Single Sign-On', '/demo/sso', 'Log into Inventory System. Access Payroll System without re-authenticating. SSO token lifecycle.', 'badge-purple', 'Federation'),
+      ('⚡', 'Passwordless', '/demo/passwordless', 'Magic link authentication flow. No passwords, just a one-time URL sent to your inbox.', 'badge-green', 'Authentication'),
+      ('🚨', 'Attack Demos', '/demo/attacks', 'SQL injection, JWT tampering, IDOR, brute-force, credential stuffing — all safely simulated.', 'badge-red', 'Security'),
+    ] %}
+
+    {% for icon, title, url, desc, badge_class, category in features %}
+    <div class="card" style="transition: border-color 0.2s, box-shadow 0.2s; cursor: pointer;" onmouseenter="this.style.borderColor='var(--accent-cyan)'; this.style.boxShadow='var(--shadow-glow)'" onmouseleave="this.style.borderColor=''; this.style.boxShadow=''">
+      <div style="margin-bottom: 1rem;">
+        <span style="font-size: 1.8rem;">{{ icon }}</span>
+        <span class="badge {{ badge_class }}" style="margin-left: 0.5rem;">{{ category }}</span>
+      </div>
+      <h3 style="margin-bottom: 0.5rem; font-size: 1rem;">{{ title }}</h3>
+      <p style="font-size: 0.85rem; margin-bottom: 1rem; color: var(--text-muted);">{{ desc }}</p>
+      <a href="{{ url }}" class="btn btn-secondary btn-sm">Open Demo →</a>
+    </div>
+    {% endfor %}
+
+  </div>
+
+  <!-- Tech Stack -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <div class="card-header">
+      <div class="card-icon">⚙️</div>
+      <div class="card-title">Technology Stack</div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; font-size: 0.85rem;">
+      <div>
+        <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.5rem;">Backend</div>
+        <div style="color: var(--text-secondary); line-height: 2;">
+          Python 3.12 · FastAPI · SQLModel<br>SQLite · Pydantic · Uvicorn
+        </div>
+      </div>
+      <div>
+        <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.5rem;">Security</div>
+        <div style="color: var(--text-secondary); line-height: 2;">
+          Argon2id · bcrypt · JWT (HS256)<br>python-jose · passlib · pyotp
+        </div>
+      </div>
+      <div>
+        <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.5rem;">Frontend</div>
+        <div style="color: var(--text-secondary); line-height: 2;">
+          Jinja2 · Vanilla JS · No frameworks<br>JetBrains Mono · Inter
+        </div>
+      </div>
+      <div>
+        <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.5rem;">Architecture</div>
+        <div style="color: var(--text-secondary); line-height: 2;">
+          Router → Service → Repository<br>Dependency Injection · Audit Logs
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
