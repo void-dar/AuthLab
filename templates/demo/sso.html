@@ -124,7 +124,7 @@ let ssoToken = null;
 async function ssoLogin() {
   const username = document.getElementById('sso-user').value;
   const password = document.getElementById('sso-pass').value;
-  setLoading('sso-btn', true);
+  setLoading(`${document.getElementById("sso-btn")}`, true);
   try {
     const data = await API.post('/api/demo/sso/login', { username, password });
     ssoToken = data.sso_token;
@@ -141,7 +141,7 @@ async function ssoLogin() {
     document.getElementById('sso-apps').style.display = 'block';
     Toast.success('SSO session established!');
   } catch(e) { Toast.error(e.message); }
-  finally { setLoading('sso-btn', false); }
+  finally { setLoading(`${document.getElementById("sso-btn")}`, false); }
 }
 
 async function accessApp(app) {
