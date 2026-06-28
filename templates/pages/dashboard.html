@@ -170,6 +170,7 @@ async function loadDashboard() {
     document.getElementById('token-expiry').textContent = diff > 0 ? `in ${diff}s` : 'Expired';
   }
 }
+window.addEventListener('load', loadDashboard)
 loadDashboard();
 </script>
 {% endblock %}
